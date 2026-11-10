@@ -1,0 +1,7 @@
+packages:
+  - apps/*
+  - packages/*
+  - services/*
+  - infra
+allowBuilds:
+  esbuild: true

@@ -1,0 +1,12 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" width="1024" height="1024">
+  <title>Note app icon D, Scribble</title>
+  <rect width="512" height="512" fill="#FFFFFF"/>
+  <g transform="rotate(-45 256 256) translate(34 181)" fill="none" stroke-width="52">
+    <circle cx="26" cy="75" r="26" fill="#FF5E62"/>
+    <circle cx="418" cy="75" r="26" fill="#6C4DFF"/>
+    <path d="M26 76V75A49 49 0 0 1 124 75V76" stroke="#FF5E62"/>
+    <path d="M222 76V75A49 49 0 0 1 320 75V76" stroke="#22D3C5"/>
+    <path d="M124 75A49 49 0 0 0 222 75" stroke="#FFBE2E"/>
+    <path d="M320 75A49 49 0 0 0 418 75" stroke="#6C4DFF"/>
+  </g>
+</svg>

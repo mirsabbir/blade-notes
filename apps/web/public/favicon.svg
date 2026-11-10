@@ -1,0 +1,8 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512"><clipPath id="r"><rect width="512" height="512" rx="115"/></clipPath><g clip-path="url(#r)">
+  <title>Note app icon C, Stack</title>
+  <rect width="512" height="512" fill="#6C4DFF"/>
+  <path d="M0 44H353A115 115 0 0 1 468 159V512H0Z" fill="#FF5E62"/>
+  <path d="M0 88H309A115 115 0 0 1 424 203V512H0Z" fill="#FFBE2E"/>
+  <path d="M0 132H265A115 115 0 0 1 380 247V512H0Z" fill="#22D3C5"/>
+  <path d="M0 176H221A115 115 0 0 1 336 291V512H0Z" fill="#FFFFFF"/>
+</g></svg>

@@ -1,0 +1,18 @@
+{
+  "name": "@blade-notes/api",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "typecheck": "tsc -p ."
+  },
+  "devDependencies": {
+    "@types/aws-lambda": "^8.10.164"
+  },
+  "dependencies": {
+    "@aws-sdk/client-dynamodb": "^3.1165.0",
+    "@aws-sdk/client-s3": "^3.1165.0",
+    "@aws-sdk/lib-dynamodb": "^3.1165.0",
+    "@aws-sdk/s3-request-presigner": "^3.1165.0",
+    "@blade-notes/core": "workspace:*"
+  }
+}

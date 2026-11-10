@@ -1,0 +1,17 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-10T19:35:09Z" },
+  "title": "Note App Icon",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 512, "h": 512, "title": "A · Overprint", "radius": 115 },
+    "Lines.dc.html": { "x": 592, "y": 0, "w": 512, "h": 512, "title": "B · Lines", "radius": 115 },
+    "Stack.dc.html": { "x": 1184, "y": 0, "w": 512, "h": 512, "title": "C · Stack", "radius": 115 },
+    "Scribble.dc.html": { "x": 1776, "y": 0, "w": 512, "h": 512, "title": "D · Scribble", "radius": 115 },
+    "Sizes.dc.html": { "x": 0, "y": 632, "w": 1440, "h": 640, "title": "At real sizes" }
+  },
+  "order": ["Main.dc.html", "Lines.dc.html", "Stack.dc.html", "Scribble.dc.html", "Sizes.dc.html"],
+  "notes": {},
+  "designSystems": []
+}

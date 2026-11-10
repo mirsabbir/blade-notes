@@ -1,0 +1,66 @@
+<p align="center"><img src="apps/web/public/favicon.svg" width="72" alt=""></p>
+
+# Blade Notes
+
+A personal notes and tasks app built around **blades**: click a space or folder and its contents open in a new column to the right. Folders nest as deep as you like; once more than three columns are open, the older ones fold into thin strips you can click to reopen.
+
+- Spaces, folders, notes and tasks in one tree, any depth
+- Rich text (Tiptap): headings, lists, checklists, quotes, code, tables, links, images
+- Tasks with status, due date, priority and a rich-text description
+- Works offline: the whole library is kept in the browser and syncs when online
+- Search across titles and note text (⌘K), light and dark mode
+
+Status: the web app is the first piece. Mobile apps (Expo), Google and Apple Calendar, and AI features come next.
+
+## How it runs
+
+```mermaid
+flowchart LR
+  B[Browser / phone] --> CF[CloudFront]
+  CF -->|static files| S3W[(S3: web app)]
+  CF -->|/api/*| API[API Gateway] --> L[Lambda]
+  L --> D[(DynamoDB)]
+  L --> F[(S3: images)]
+  B -.->|sign-in| C[Cognito]
+```
+
+Serverless on AWS, so an idle account costs almost nothing (well under $1/month for one person). See [docs/architecture.md](docs/architecture.md) for the data model and sync protocol.
+
+| Folder | What |
+|---|---|
+| `apps/web` | React + Vite web app |
+| `packages/core` | Shared types and fractional ranks |
+| `services/api` | The Lambda behind `/api` |
+| `infra` | AWS CDK stack: DynamoDB, S3, Cognito, API, CloudFront, DNS |
+| `assets/icon` | App icon sources |
+
+## Deploy your own
+
+Needs Node 22+, pnpm, an AWS account with a Route 53 hosted zone, and the AWS CLI signed in.
+
+```bash
+pnpm install
+cp .env.example .env        # set your domain, zone and a unique sign-in prefix
+cd infra && npx cdk bootstrap   # once per account and region
+cd .. && AWS_PROFILE=<profile> pnpm deploy
+```
+
+Sign-up is switched off, so create your own user once:
+
+```bash
+aws cognito-idp admin-create-user --user-pool-id <UserPoolId from the deploy output> --username you@example.com --user-attributes Name=email,Value=you@example.com Name=email_verified,Value=true
+```
+
+Cognito emails a temporary password; you choose a new one at first sign-in.
+
+## Develop
+
+```bash
+pnpm dev      # http://localhost:5173, talking to the deployed API
+pnpm test
+pnpm typecheck
+```
+
+## License
+
+MIT
