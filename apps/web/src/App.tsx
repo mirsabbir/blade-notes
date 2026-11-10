@@ -2,17 +2,17 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Item, TaskStatus } from '@blade-notes/core'
 import {
   ChevronRight, Circle, CircleCheck, FileText, Folder, Maximize2, Moon, PanelLeftClose, PanelLeftOpen,
-  Plus, Search, Sun, Trash2, LogOut, CloudOff, RefreshCw, Check, AlertTriangle, Settings,
+  Plus, Search, Sun, Trash2, LogOut, CloudOff, RefreshCw, Check, AlertTriangle, Settings, Paperclip,
 } from 'lucide-react'
-import { isDesktop } from './host'
-import { UpdatesPanel, useOpenUpdatesFromMenu } from './Updates'
-import { childrenOf, clearFresh, create, freshId, sync, trash, update, useStore, type SyncStatus } from './store'
+import { useOpenUpdatesFromMenu } from './Updates'
+import { SettingsDialog, type SettingsSection } from './Settings'
+import { Attachments, DropZone } from './Attachments'
+import { childrenOf, clearFresh, create, freshId, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
 
 const DEFAULT_TITLE = { space: 'New space', folder: 'New folder', note: 'Untitled', task: 'New task' } as const
 import { signOut } from './auth'
 import { Editor } from './Editor'
 
-const MAX_OPEN = 3
 const SPACE_COLORS = ['#6C4DFF', '#FF5E62', '#FFBE2E', '#22D3C5', '#2857e5']
 const isBox = (i: Item) => i.type === 'space' || i.type === 'folder'
 
@@ -66,7 +66,8 @@ export function App() {
     setManual((m) => Object.fromEntries(Object.entries(m).filter(([k, v]) => Number(k) < level && v)))
     setFocus(false)
   }
-  const folded = (i: number) => focus || (manual[i] ?? i < chain.length - MAX_OPEN)
+  const maxOpen = settingsOf(state).bladesOpen
+  const folded = (i: number) => focus || (manual[i] ?? i < chain.length - maxOpen)
 
   return (
     <div className="shell">
@@ -178,8 +179,8 @@ function LibraryBlade(props: {
   const { items } = props
   const { state } = useStore()
   const [q, setQ] = useState('')
-  const [settings, setSettings] = useState(false)
-  useOpenUpdatesFromMenu(useCallback(() => setSettings(true), []))
+  const [settings, setSettings] = useState<SettingsSection | null>(null)
+  useOpenUpdatesFromMenu(useCallback(() => setSettings('about'), []))
   const spaces = childrenOf(items, null)
   const search = useRef<HTMLInputElement>(null)
 
@@ -258,16 +259,14 @@ function LibraryBlade(props: {
           {props.dark ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
           {props.dark ? 'Light mode' : 'Dark mode'}
         </button>
-        {isDesktop && (
-          <button type="button" className="ghost" onClick={() => setSettings(true)} aria-label="About & updates" title="About & updates">
-            <Settings size={16} aria-hidden />
-          </button>
-        )}
+        <button type="button" className="ghost" onClick={() => setSettings('general')} aria-label="Settings" title="Settings">
+          <Settings size={16} aria-hidden />
+        </button>
         <button type="button" className="ghost" onClick={signOut} aria-label="Sign out" title="Sign out">
           <LogOut size={16} aria-hidden />
         </button>
       </div>
-      {settings && <UpdatesPanel onClose={() => setSettings(false)} />}
+      {settings && <SettingsDialog initial={settings} onClose={() => setSettings(null)} dark={props.dark} onToggleDark={props.onToggleDark} />}
     </section>
   )
 }
@@ -423,6 +422,12 @@ function Row({ item, items, active, onOpen, subtitle }: { item: Item; items: { [
           {item.title}
           {subtitle && <small>{subtitle}</small>}
         </span>
+        {item.attachments?.length ? (
+          <span className="meta clip" title={`${item.attachments.length} attached`}>
+            <Paperclip size={12} aria-hidden />
+            {item.attachments.length}
+          </span>
+        ) : null}
         {item.due && !done && <span className={late ? 'due today' : 'due'}>{dueLabel(item.due)}</span>}
         {count !== null && <span className="meta">{count}</span>}
         {isBox(item) && <ChevronRight size={14} className="ico" aria-hidden />}
@@ -469,6 +474,7 @@ function EditorPane(props: {
   const { chain, selected } = props
   const folder = chain.at(-1) ?? null
   const crumbs = chain.slice(1) as Item[]
+  const [uploading, setUploading] = useState<string[]>([])
   return (
     <main className="editor">
       <header className="editor-head">
@@ -498,19 +504,22 @@ function EditorPane(props: {
       </header>
 
       {selected ? (
-        <div className="editor-scroll">
-          <div className="editor-body">
-            <TitleRow item={selected} />
-            {selected.type === 'task' && <TaskFields item={selected} />}
-            {selected.type === 'task' && <div className="label">Description</div>}
-            <Editor
-              key={selected.id}
-              id={selected.id}
-              doc={props.bodies[selected.id]?.doc}
-              placeholder={selected.type === 'task' ? 'Add a description: steps, links, code, a checklist.' : 'Start writing. Markdown shortcuts work: #, -, [ ], >, ```'}
-            />
+        <DropZone item={selected} onUploading={setUploading}>
+          <div className="editor-scroll">
+            <div className="editor-body">
+              <TitleRow item={selected} />
+              {selected.type === 'task' && <TaskFields item={selected} />}
+              <Attachments item={selected} uploading={uploading} onUploading={setUploading} />
+              {selected.type === 'task' && <div className="label">Description</div>}
+              <Editor
+                key={selected.id}
+                id={selected.id}
+                doc={props.bodies[selected.id]?.doc}
+                placeholder={selected.type === 'task' ? 'Add a description: steps, links, code, a checklist.' : 'Start writing. Markdown shortcuts work: #, -, [ ], >, ```'}
+              />
+            </div>
           </div>
-        </div>
+        </DropZone>
       ) : (
         <div className="overview">
           <Folder size={28} aria-hidden />
@@ -572,6 +581,13 @@ function TitleInput({ item, className }: { item: Item; className: string }) {
   )
 }
 
+/** YYYY-MM-DD in the local time zone, `days` from today. */
+function localDate(days: number): string {
+  const d = new Date()
+  d.setDate(d.getDate() + days)
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
 function TaskFields({ item }: { item: Item }) {
   const status = item.status ?? 'todo'
   return (
@@ -584,7 +600,22 @@ function TaskFields({ item }: { item: Item }) {
       </dd>
       <dt><label htmlFor={`due-${item.id}`}>Due</label></dt>
       <dd>
-        <input id={`due-${item.id}`} type="date" className="field" value={item.due?.slice(0, 10) ?? ''} onChange={(e) => update(item.id, { due: e.target.value || undefined })} />
+        <div className="due-row">
+          <input id={`due-${item.id}`} type="date" className="field" value={item.due?.slice(0, 10) ?? ''} onChange={(e) => update(item.id, { due: e.target.value || undefined })} />
+          {([['Today', 0], ['Tomorrow', 1], ['Next week', 7]] as const).map(([label, days]) => {
+            const d = localDate(days)
+            return (
+              <button key={label} type="button" className={item.due?.slice(0, 10) === d ? 'chip on' : 'chip'} onClick={() => update(item.id, { due: d })}>
+                {label}
+              </button>
+            )
+          })}
+          {item.due && (
+            <button type="button" className="chip" onClick={() => update(item.id, { due: undefined })} aria-label="Clear the due date">
+              Clear
+            </button>
+          )}
+        </div>
       </dd>
       <dt><label htmlFor={`prio-${item.id}`}>Priority</label></dt>
       <dd>

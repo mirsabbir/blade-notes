@@ -1,14 +1,15 @@
 import { randomUUID } from 'node:crypto'
 import { DynamoDBClient, ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb'
 import { DynamoDBDocumentClient, GetCommand, PutCommand, QueryCommand, UpdateCommand } from '@aws-sdk/lib-dynamodb'
-import { S3Client, GetObjectCommand, PutObjectCommand } from '@aws-sdk/client-s3'
+import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
+import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { APIGatewayProxyEventV2WithJWTAuthorizer as Event, APIGatewayProxyResultV2 as Result } from 'aws-lambda'
 import type { Body, Change, PullResponse, PushRequest, PushResponse, Record } from '@blade-notes/core'
 
 /**
  * One table, one partition per user:
- *   pk = USER#<sub>, sk = ITEM#<id> | BODY#<id> | META#counter
+ *   pk = USER#<sub>, sk = ITEM#<id> | BODY#<id> | SETTINGS#settings | META#counter
  * Every write takes the next `seq` from the counter; the `bySeq` index (pk, seq)
  * answers "what changed after N", which is the whole sync protocol.
  */
@@ -30,13 +31,14 @@ export async function handler(event: Event): Promise<Result> {
   const route = event.routeKey
   try {
     // No login on this route: an <img> tag cannot send a token. The URL holds a random UUID, which is the key.
-    if (route === 'GET /api/files/{owner}/{name}') return await file(event.pathParameters?.owner ?? '', event.pathParameters?.name ?? '')
+    if (route === 'GET /api/files/{owner}/{name}')
+      return await file(event.pathParameters?.owner ?? '', event.pathParameters?.name ?? '', event.queryStringParameters?.name)
     const sub = event.requestContext.authorizer?.jwt?.claims?.sub
     if (typeof sub !== 'string') return json(401, { error: 'no user' })
     const pk = `USER#${sub}`
     if (route === 'GET /api/sync') return json(200, await pull(pk, Number(event.queryStringParameters?.since ?? 0)))
     if (route === 'POST /api/sync') return json(200, await push(pk, parse<PushRequest>(event)))
-    if (route === 'POST /api/uploads') return json(200, await upload(sub, parse<{ contentType?: string }>(event)))
+    if (route === 'POST /api/uploads') return json(200, await upload(sub, parse<{ contentType?: string; name?: string; size?: number }>(event)))
     return json(404, { error: 'not found' })
   } catch (err) {
     if (err instanceof BadRequest) return json(400, { error: err.message })
@@ -94,7 +96,7 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
   let seq = await reserve(pk, changes.length)
   for (const c of changes) {
     const mine = seq++
-    const sk = `${c.kind === 'item' ? 'ITEM' : 'BODY'}#${c.data.id}`
+    const sk = `${c.kind.toUpperCase()}#${c.data.id}`
     const put = new PutCommand({
       TableName: TABLE,
       Item: { pk, sk, seq: mine, kind: c.kind, data: c.kind === 'body' ? { ...c.data, doc: JSON.stringify(c.data.doc) } : c.data },
@@ -130,27 +132,43 @@ function validate(c: Change): void {
   if (c.kind === 'body') {
     if (typeof c.baseSeq !== 'number') throw new BadRequest('a body change needs baseSeq')
     if (JSON.stringify(c.data).length > 350_000) throw new BadRequest(`body ${id} is over 350 kB; move images to uploads`)
+  } else if (c.kind === 'settings') {
+    if (id !== 'settings') throw new BadRequest('the settings record has id "settings"')
   } else if (c.kind !== 'item') {
-    throw new BadRequest('kind must be item or body')
+    throw new BadRequest('kind must be item, body or settings')
   }
 }
 
-const IMAGE_TYPES: { [k: string]: string } = { 'image/png': 'png', 'image/jpeg': 'jpg', 'image/webp': 'webp', 'image/gif': 'gif' }
+const MAX_FILE = 50 * 1024 * 1024
+const FILE_NAME = /^[0-9a-f-]{36}\.[a-z0-9]{1,10}$/
 
-async function upload(sub: string, req: { contentType?: string }) {
-  const ext = IMAGE_TYPES[req.contentType ?? '']
-  if (!ext) throw new BadRequest('only png, jpeg, webp or gif images')
+/**
+ * Any file type, up to 50 MB: S3 itself enforces the size through the POST policy.
+ * The key keeps only a short lower-case extension from the original name.
+ */
+async function upload(sub: string, req: { contentType?: string; name?: string; size?: number }) {
+  if (typeof req.size !== 'number' || req.size <= 0 || req.size > MAX_FILE) throw new BadRequest('files must be 1 byte to 50 MB')
+  const ext = /\.([a-z0-9]{1,10})$/i.exec(req.name ?? '')?.[1]?.toLowerCase() ?? 'bin'
+  const contentType = /^[\w.+-]+\/[\w.+-]+$/.test(req.contentType ?? '') ? req.contentType! : 'application/octet-stream'
   const key = `${randomUUID()}.${ext}`
-  const url = await getSignedUrl(
-    s3,
-    new PutObjectCommand({ Bucket: BUCKET, Key: `users/${sub}/${key}`, ContentType: req.contentType }),
-    { expiresIn: 300 },
-  )
-  return { uploadUrl: url, src: `/api/files/${sub}/${key}` }
+  const post = await createPresignedPost(s3, {
+    Bucket: BUCKET,
+    Key: `users/${sub}/${key}`,
+    Fields: { 'Content-Type': contentType },
+    Conditions: [['content-length-range', 1, MAX_FILE], ['eq', '$Content-Type', contentType]],
+    Expires: 600,
+  })
+  return { upload: post, src: `/api/files/${sub}/${key}` }
 }
 
-async function file(owner: string, name: string): Promise<Result> {
-  if (!/^[0-9a-f-]{36}$/.test(owner) || !/^[0-9a-f-]{36}\.(png|jpg|webp|gif)$/.test(name)) return json(404, { error: 'not found' })
-  const url = await getSignedUrl(s3, new GetObjectCommand({ Bucket: BUCKET, Key: `users/${owner}/${name}` }), { expiresIn: 3600 })
+/** `?name=` sets the download's file name; without it the browser shows the file (images in notes). */
+async function file(owner: string, key: string, downloadName?: string): Promise<Result> {
+  if (!/^[0-9a-f-]{36}$/.test(owner) || !FILE_NAME.test(key)) return json(404, { error: 'not found' })
+  const disposition = downloadName ? `attachment; filename*=UTF-8''${encodeURIComponent(downloadName.slice(0, 200))}` : undefined
+  const url = await getSignedUrl(
+    s3,
+    new GetObjectCommand({ Bucket: BUCKET, Key: `users/${owner}/${key}`, ResponseContentDisposition: disposition }),
+    { expiresIn: 3600 },
+  )
   return { statusCode: 302, headers: { location: url, 'cache-control': 'private, max-age=3000' } }
 }

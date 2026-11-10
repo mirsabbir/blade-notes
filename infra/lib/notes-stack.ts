@@ -55,7 +55,7 @@ export class NotesStack extends Stack {
       enforceSSL: true,
       versioned: true,
       removalPolicy: RemovalPolicy.RETAIN,
-      cors: [{ allowedMethods: [s3.HttpMethods.PUT], allowedOrigins: [siteUrl, devUrl], allowedHeaders: ['content-type'] }],
+      cors: [{ allowedMethods: [s3.HttpMethods.POST], allowedOrigins: [siteUrl, devUrl], allowedHeaders: ["*"] }],
     })
 
     // ---- Sign-in: only accounts created by the owner; no self sign-up.
@@ -93,7 +93,7 @@ export class NotesStack extends Stack {
       timeout: Duration.seconds(10),
       environment: { TABLE_NAME: table.tableName, FILES_BUCKET: files.bucketName },
       logGroup: new logs.LogGroup(this, 'ApiLogs', { retention: logs.RetentionDays.ONE_MONTH, removalPolicy: RemovalPolicy.DESTROY }),
-      bundling: { format: OutputFormat.ESM, target: 'node22', minify: true, sourceMap: true },
+      bundling: { format: OutputFormat.ESM, target: 'node22', minify: true, sourceMap: true, externalModules: [], banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);" },
     })
     table.grantReadWriteData(fn)
     files.grantReadWrite(fn)

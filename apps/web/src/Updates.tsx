@@ -65,36 +65,28 @@ export function UpdateBanner() {
   )
 }
 
-/** Settings → About & updates. Only exists inside the desktop app. */
-export function UpdatesPanel({ onClose }: { onClose: () => void }) {
+/** Settings → About & updates. Only shown inside the desktop app. */
+export function UpdatesSection() {
   const { info, checking, check } = useUpdate()
   return (
-    <div className="dialog-backdrop" onPointerDown={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="dialog" role="dialog" aria-modal="true" aria-labelledby="updates-title">
-        <div className="dialog-head">
-          <h2 id="updates-title">About & updates</h2>
-          <button className="ghost" aria-label="Close" onClick={onClose}>
-            <X size={16} aria-hidden />
+    <>
+      <dl className="fields">
+        <dt>Version</dt>
+        <dd>{info?.current ?? '…'}</dd>
+        <dt>Latest</dt>
+        <dd>{checking ? 'Checking…' : info?.error ? <span className="muted">Can't check: {info.error}</span> : (info?.latest ?? '…')}</dd>
+      </dl>
+      <p className="muted small">Updates come from the project's GitHub Releases. Installing downloads the new version, replaces the app and reopens it. Your notes are kept.</p>
+      <div className="dialog-actions">
+        {info?.available && info.latest ? (
+          <InstallButton version={info.latest} />
+        ) : (
+          <button className="btn" disabled={checking} onClick={() => void check(true)}>
+            <RefreshCw size={14} aria-hidden /> Check for updates
           </button>
-        </div>
-        <dl className="fields">
-          <dt>Version</dt>
-          <dd>{info?.current ?? '…'}</dd>
-          <dt>Latest</dt>
-          <dd>{checking ? 'Checking…' : info?.error ? <span className="muted">Can't check: {info.error}</span> : (info?.latest ?? '…')}</dd>
-        </dl>
-        <p className="muted small">Updates come from the project's GitHub Releases. Installing downloads the new version, replaces the app and reopens it. Your notes are kept.</p>
-        <div className="dialog-actions">
-          {info?.available && info.latest ? (
-            <InstallButton version={info.latest} />
-          ) : (
-            <button className="btn" disabled={checking} onClick={() => void check(true)}>
-              <RefreshCw size={14} aria-hidden /> Check for updates
-            </button>
-          )}
-        </div>
+        )}
       </div>
-    </div>
+    </>
   )
 }
 

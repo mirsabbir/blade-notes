@@ -20,10 +20,23 @@ export interface Item {
   /** Tasks only: ISO date (`2026-11-14`) or date-time with offset. */
   due?: string
   priority?: Priority
+  /** Files attached to a task or note. */
+  attachments?: Attachment[]
   createdAt: string
   updatedAt: string
   /** Set when the item is in the trash. */
   deletedAt?: string
+}
+
+export interface Attachment {
+  id: string
+  /** Original file name, shown and used for downloads. */
+  name: string
+  size: number
+  type: string
+  /** `/api/files/<owner>/<key>`; add `?name=` to download with the original name. */
+  src: string
+  addedAt: string
 }
 
 /** A note's (or a task description's) rich text, stored apart so listing a folder never loads it. */
@@ -38,6 +51,29 @@ export interface Body {
 export type Record =
   | { kind: 'item'; seq: number; data: Item }
   | { kind: 'body'; seq: number; data: Body }
+  | { kind: 'settings'; seq: number; data: Settings }
+
+export type CalendarProvider = 'google' | 'outlook' | 'apple'
+
+/** One per account (id is always "settings"), synced like everything else, last write wins. */
+export interface Settings {
+  id: 'settings'
+  /** How many blades stay open before the oldest fold into strips. */
+  bladesOpen: number
+  /** The calendar every space uses unless it says otherwise. null = no calendar. */
+  defaultCalendar: CalendarProvider | null
+  /** Per-space choice; a space missing here follows `defaultCalendar`. null = this space has no calendar. */
+  spaceCalendars: { [spaceId: string]: CalendarProvider | null }
+  updatedAt: string
+}
+
+export const DEFAULT_SETTINGS: Settings = {
+  id: 'settings',
+  bladesOpen: 3,
+  defaultCalendar: null,
+  spaceCalendars: {},
+  updatedAt: '1970-01-01T00:00:00.000Z',
+}
 
 export interface PullResponse {
   records: Record[]
@@ -49,6 +85,7 @@ export type Change =
   | { kind: 'item'; data: Item }
   /** `baseSeq`: the seq of the body this edit started from; 0 for a new body. */
   | { kind: 'body'; data: Body; baseSeq: number }
+  | { kind: 'settings'; data: Settings }
 
 export interface PushRequest {
   changes: Change[]

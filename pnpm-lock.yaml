@@ -114,6 +114,9 @@ importers:
       '@aws-sdk/lib-dynamodb':
         specifier: ^3.1165.0
         version: 3.1165.0(@aws-sdk/client-dynamodb@3.1165.0)
+      '@aws-sdk/s3-presigned-post':
+        specifier: ^3.1165.0
+        version: 3.1165.0
       '@aws-sdk/s3-request-presigner':
         specifier: ^3.1165.0
         version: 3.1165.0
@@ -212,6 +215,10 @@ packages:
 
   '@aws-sdk/nested-clients@3.998.2':
     resolution: {integrity: sha512-T1vNOfMdvdjXU4Nq267iTFoxZ2Bj0vEatkp66j8wBtrpDoX1mBWmxy7RL8O93S2oXo+BFEiXH3nWtLMd0svLnA==}
+    engines: {node: '>=20.0.0'}
+
+  '@aws-sdk/s3-presigned-post@3.1165.0':
+    resolution: {integrity: sha512-eQvsA+k38EbQRd7zeTHU03dGQdv7ljBzta4oeNNfrX44gCILTMtlyr9ljTgx+4SawBuShzX1bgEiTJeNnAy5Rw==}
     engines: {node: '>=20.0.0'}
 
   '@aws-sdk/s3-request-presigner@3.1165.0':
@@ -1482,6 +1489,16 @@ snapshots:
       '@smithy/core': 3.39.0
       '@smithy/fetch-http-handler': 5.8.1
       '@smithy/node-http-handler': 4.14.2
+      '@smithy/types': 4.20.0
+      tslib: 2.9.1
+
+  '@aws-sdk/s3-presigned-post@3.1165.0':
+    dependencies:
+      '@aws-sdk/client-s3': 3.1165.0
+      '@aws-sdk/core': 3.980.2
+      '@aws-sdk/types': 3.975.1
+      '@smithy/core': 3.39.0
+      '@smithy/signature-v4': 5.7.5
       '@smithy/types': 4.20.0
       tslib: 2.9.1
 
