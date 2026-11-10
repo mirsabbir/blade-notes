@@ -10,7 +10,16 @@ A personal notes and tasks app built around **blades**: click a space or folder 
 - Works offline: the whole library is kept in the browser and syncs when online
 - Search across titles and note text (⌘K), light and dark mode
 
-Status: the web app is the first piece. Mobile apps (Expo), Google and Apple Calendar, and AI features come next.
+Runs in the browser and as desktop apps for **macOS (Apple Silicon)** and **Windows (x64)**, which update themselves from GitHub Releases (Settings → About & updates). Mobile apps (Expo), Google and Apple Calendar, and AI features come next.
+
+## Desktop apps
+
+Download the latest from [Releases](../../releases/latest):
+
+- **macOS:** `BladeNotes-macOS.dmg`, drag Blade Notes to Applications. The app isn't notarized yet, so the first time right-click it → Open, or run `xattr -dr com.apple.quarantine "/Applications/Blade Notes.app"`.
+- **Windows:** `BladeNotes-Windows-x64.zip`, unzip anywhere you can write to (for example `%LOCALAPPDATA%\Programs\Blade Notes`) and run `BladeNotes.exe`. Nothing else to install; WebView2 ships with Windows 10 and 11.
+
+Both are thin native windows around the web app (`apps/desktop-macos` in Swift/WebKit, `apps/desktop-windows` in .NET/WebView2), so they always show the latest web version and keep their own sign-in and offline data. A tag `v*` builds both and publishes the release (`.github/workflows/release.yml`).
 
 ## How it runs
 

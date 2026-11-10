@@ -1,0 +1,59 @@
+# Pushing a tag like v0.1.0 builds the macOS (Apple Silicon) DMG and the Windows x64 zip
+# and publishes both as a GitHub Release. The desktop apps update themselves from it.
+name: Release
+
+on:
+  push:
+    tags: ["v*"]
+
+permissions:
+  contents: write
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the app
+        run: VERSION="${GITHUB_REF_NAME#v}" UPDATE_REPOSITORY="$GITHUB_REPOSITORY" apps/desktop-macos/build.sh
+      - name: Make the DMG
+        run: |
+          mkdir dmg
+          cp -R "apps/desktop-macos/build.noindex/Blade Notes.app" dmg/
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname "Blade Notes" -srcfolder dmg -ov -format UDZO BladeNotes-macOS.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: BladeNotes-macOS.dmg
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish and zip
+        shell: pwsh
+        run: |
+          $version = $env:GITHUB_REF_NAME.TrimStart('v')
+          dotnet publish apps/desktop-windows -c Release -o publish -p:Version=$version -p:UpdateRepository=$env:GITHUB_REPOSITORY
+          if (-not (Test-Path publish/BladeNotes.exe)) { throw "BladeNotes.exe missing from the build" }
+          Compress-Archive -Path publish/* -DestinationPath BladeNotes-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: BladeNotes-Windows-x64.zip
+
+  release:
+    needs: [macos, windows]
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/download-artifact@v4
+        with:
+          merge-multiple: true
+      - name: Publish the release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$GITHUB_REF_NAME" BladeNotes-* --repo "$GITHUB_REPOSITORY" --title "Blade Notes $GITHUB_REF_NAME" --generate-notes

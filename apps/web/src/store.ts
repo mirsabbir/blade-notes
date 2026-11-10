@@ -57,6 +57,12 @@ export function childrenOf(items: State['items'], parentId: string | null): Item
     .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0))
 }
 
+/** The item created last on this device, so its title field can take focus once. */
+export let freshId: string | null = null
+export const clearFresh = () => {
+  freshId = null
+}
+
 export function create(type: Item['type'], parentId: string | null, title: string, extra: Partial<Item> = {}): Item {
   const siblings = childrenOf(state.items, parentId)
   const t = now()
@@ -71,6 +77,7 @@ export function create(type: Item['type'], parentId: string | null, title: strin
     ...(type === 'task' && { status: 'todo' as const }),
     ...extra,
   }
+  freshId = item.id
   commit({ ...state, items: { ...state.items, [item.id]: item }, pending: mark(state.pending, `item:${item.id}`) })
   scheduleSync()
   return item

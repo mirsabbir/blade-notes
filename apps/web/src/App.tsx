@@ -1,10 +1,14 @@
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Item, TaskStatus } from '@blade-notes/core'
 import {
   ChevronRight, Circle, CircleCheck, FileText, Folder, Maximize2, Moon, PanelLeftClose, PanelLeftOpen,
-  Plus, Search, Sun, Trash2, LogOut, CloudOff, RefreshCw, Check, AlertTriangle,
+  Plus, Search, Sun, Trash2, LogOut, CloudOff, RefreshCw, Check, AlertTriangle, Settings,
 } from 'lucide-react'
-import { childrenOf, create, sync, trash, update, useStore, type SyncStatus } from './store'
+import { isDesktop } from './host'
+import { UpdatesPanel, useOpenUpdatesFromMenu } from './Updates'
+import { childrenOf, clearFresh, create, freshId, sync, trash, update, useStore, type SyncStatus } from './store'
+
+const DEFAULT_TITLE = { space: 'New space', folder: 'New folder', note: 'Untitled', task: 'New task' } as const
 import { signOut } from './auth'
 import { Editor } from './Editor'
 
@@ -174,6 +178,8 @@ function LibraryBlade(props: {
   const { items } = props
   const { state } = useStore()
   const [q, setQ] = useState('')
+  const [settings, setSettings] = useState(false)
+  useOpenUpdatesFromMenu(useCallback(() => setSettings(true), []))
   const spaces = childrenOf(items, null)
   const search = useRef<HTMLInputElement>(null)
 
@@ -240,10 +246,7 @@ function LibraryBlade(props: {
             <button
               type="button"
               className="add"
-              onClick={() => {
-                const name = prompt('Name of the new space')
-                if (name?.trim()) props.onOpen(create('space', null, name.trim(), { color: SPACE_COLORS[spaces.length % SPACE_COLORS.length] }).id)
-              }}
+              onClick={() => props.onOpen(create('space', null, DEFAULT_TITLE.space, { color: SPACE_COLORS[spaces.length % SPACE_COLORS.length] }).id)}
             >
               <Plus size={15} aria-hidden /> New space
             </button>
@@ -255,10 +258,16 @@ function LibraryBlade(props: {
           {props.dark ? <Sun size={16} aria-hidden /> : <Moon size={16} aria-hidden />}
           {props.dark ? 'Light mode' : 'Dark mode'}
         </button>
+        {isDesktop && (
+          <button type="button" className="ghost" onClick={() => setSettings(true)} aria-label="About & updates" title="About & updates">
+            <Settings size={16} aria-hidden />
+          </button>
+        )}
         <button type="button" className="ghost" onClick={signOut} aria-label="Sign out" title="Sign out">
           <LogOut size={16} aria-hidden />
         </button>
       </div>
+      {settings && <UpdatesPanel onClose={() => setSettings(false)} />}
     </section>
   )
 }
@@ -281,6 +290,19 @@ function FolderBlade(props: {
   const { node, items } = props
   const kids = childrenOf(items, node.id)
   const [menu, setMenu] = useState(false)
+  const menuRef = useRef<HTMLDivElement>(null)
+  useEffect(() => {
+    if (!menu) return
+    const close = (e: Event) => {
+      if (e instanceof KeyboardEvent ? e.key === 'Escape' : !menuRef.current?.contains(e.target as Node)) setMenu(false)
+    }
+    document.addEventListener('pointerdown', close)
+    document.addEventListener('keydown', close)
+    return () => {
+      document.removeEventListener('pointerdown', close)
+      document.removeEventListener('keydown', close)
+    }
+  }, [menu])
   const groups: [string, Item[]][] = [
     ['Pinned', kids.filter((k) => k.pinned)],
     ['Folders', kids.filter((k) => !k.pinned && isBox(k))],
@@ -289,9 +311,7 @@ function FolderBlade(props: {
   ]
   const add = (type: 'folder' | 'note' | 'task') => {
     setMenu(false)
-    const label = { folder: 'folder', note: 'note', task: 'task' }[type]
-    const title = type === 'folder' ? prompt(`Name of the new ${label}`) : type === 'task' ? prompt('What needs doing?') : 'Untitled'
-    if (title?.trim()) props.onOpen(create(type, node.id, title.trim()).id)
+    props.onOpen(create(type, node.id, DEFAULT_TITLE[type]).id)
   }
   return (
     <section className="blade" aria-label={node.title}>
@@ -303,7 +323,7 @@ function FolderBlade(props: {
           </h2>
           <p>{summary(kids)}</p>
         </div>
-        <div className="menu-wrap">
+        <div className="menu-wrap" ref={menuRef}>
           <button type="button" className="ghost" aria-label={`New in ${node.title}`} title={`New in ${node.title}`} aria-expanded={menu} onClick={() => setMenu(!menu)}>
             <Plus size={16} aria-hidden />
           </button>
@@ -494,13 +514,15 @@ function EditorPane(props: {
       ) : (
         <div className="overview">
           <Folder size={28} aria-hidden />
-          <h1>{folder?.title ?? 'Library'}</h1>
+          {folder ? <TitleInput item={folder} className="overview-title" /> : <h1>Library</h1>}
           <p>{folder ? summary(childrenOf(props.items, folder.id)) : 'Pick a space on the left, or create one.'}</p>
           {folder && (
             <div className="overview-actions">
-              <button className="btn" onClick={() => props.onOpen(create('note', folder.id, 'Untitled').id)}>New note</button>
-              <button className="btn" onClick={() => { const t = prompt('What needs doing?'); if (t?.trim()) props.onOpen(create('task', folder.id, t.trim()).id) }}>New task</button>
-              <button className="btn" onClick={() => { const t = prompt('Name of the new folder'); if (t?.trim()) props.onOpen(create('folder', folder.id, t.trim()).id) }}>New folder</button>
+              {(['note', 'task', 'folder'] as const).map((t) => (
+                <button key={t} className="btn" onClick={() => props.onOpen(create(t, folder.id, DEFAULT_TITLE[t]).id)}>
+                  New {t}
+                </button>
+              ))}
             </div>
           )}
         </div>
@@ -518,19 +540,35 @@ function TitleRow({ item }: { item: Item }) {
           {done ? <CircleCheck size={26} className="done-ico" aria-hidden /> : <Circle size={26} aria-hidden />}
         </button>
       )}
-      <input
-        key={item.id}
-        className={done ? 'title done' : 'title'}
-        defaultValue={item.title}
-        aria-label="Title"
-        onBlur={(e) => {
-          const v = e.target.value.trim()
-          if (v && v !== item.title) update(item.id, { title: v })
-          else e.target.value = item.title
-        }}
-        onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
-      />
+      <TitleInput item={item} className={done ? 'title done' : 'title'} />
     </div>
+  )
+}
+
+/** Title field; a just-created item gets focus with its default name selected, ready to type over. */
+function TitleInput({ item, className }: { item: Item; className: string }) {
+  const ref = useRef<HTMLInputElement>(null)
+  useEffect(() => {
+    if (freshId === item.id && ref.current) {
+      ref.current.focus()
+      ref.current.select()
+      clearFresh()
+    }
+  }, [item.id])
+  return (
+    <input
+      ref={ref}
+      key={item.id}
+      className={className}
+      defaultValue={item.title}
+      aria-label="Title"
+      onBlur={(e) => {
+        const v = e.target.value.trim()
+        if (v && v !== item.title) update(item.id, { title: v })
+        else e.target.value = item.title
+      }}
+      onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
+    />
   )
 }
 

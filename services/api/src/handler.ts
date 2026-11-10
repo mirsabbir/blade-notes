@@ -67,7 +67,7 @@ async function pull(pk: string, since: number): Promise<PullResponse> {
       Limit: PAGE,
     }),
   )
-  const records: Record[] = (res.Items ?? []).map((r) => ({ kind: r.kind, seq: r.seq, data: r.data }) as Record)
+  const records: Record[] = (res.Items ?? []).map((r) => ({ kind: r.kind, seq: r.seq, data: fromStored(r.kind, r.data) }) as Record)
   return { records, cursor: records.at(-1)?.seq ?? since, more: res.LastEvaluatedKey !== undefined }
 }
 
@@ -97,7 +97,7 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
     const sk = `${c.kind === 'item' ? 'ITEM' : 'BODY'}#${c.data.id}`
     const put = new PutCommand({
       TableName: TABLE,
-      Item: { pk, sk, seq: mine, kind: c.kind, data: c.data },
+      Item: { pk, sk, seq: mine, kind: c.kind, data: c.kind === 'body' ? { ...c.data, doc: JSON.stringify(c.data.doc) } : c.data },
       // A body only overwrites the version its edit started from; items are last-write-wins.
       ...(c.kind === 'body' && {
         ConditionExpression: 'attribute_not_exists(seq) OR seq <= :base',
@@ -110,10 +110,18 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
     } catch (err) {
       if (!(err instanceof ConditionalCheckFailedException)) throw err
       const current = await db.send(new GetCommand({ TableName: TABLE, Key: { pk, sk } }))
-      out.conflicts.push({ id: c.data.id, server: current.Item!.data as Body, seq: current.Item!.seq as number })
+      out.conflicts.push({ id: c.data.id, server: fromStored('body', current.Item!.data) as Body, seq: current.Item!.seq as number })
     }
   }
   return out
+}
+
+/**
+ * A body's document is stored as a JSON string: DynamoDB allows only 32 levels of
+ * nested maps/lists, and a Tiptap doc with deeply nested lists goes past that.
+ */
+function fromStored(kind: string, data: { doc?: unknown }) {
+  return kind === 'body' && typeof data.doc === 'string' ? { ...data, doc: JSON.parse(data.doc) } : data
 }
 
 function validate(c: Change): void {

@@ -1,0 +1,31 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+    <TargetFramework>net8.0-windows10.0.19041.0</TargetFramework>
+    <UseWindowsForms>true</UseWindowsForms>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <AssemblyName>BladeNotes</AssemblyName>
+    <RootNamespace>BladeNotes</RootNamespace>
+    <Product>Blade Notes</Product>
+    <Version>0.0.0-dev</Version>
+    <RuntimeIdentifier>win-x64</RuntimeIdentifier>
+    <!-- Self-contained: runs without installing the .NET runtime first. -->
+    <SelfContained>true</SelfContained>
+    <ApplicationIcon>../../assets/icon/blade-notes.ico</ApplicationIcon>
+    <ApplicationHighDpiMode>PerMonitorV2</ApplicationHighDpiMode>
+    <EnableWindowsTargeting>true</EnableWindowsTargeting>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.Web.WebView2" Version="1.0.2903.40" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <!-- owner/repo whose GitHub Releases the app updates from; CI passes -p:UpdateRepository. -->
+    <AssemblyMetadata Include="UpdateRepository" Value="$(UpdateRepository)" />
+    <AssemblyMetadata Include="AppUrl" Value="$(AppUrl)" />
+  </ItemGroup>
+
+</Project>

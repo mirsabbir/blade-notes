@@ -4,6 +4,7 @@ import '@fontsource-variable/geist'
 import '@fontsource-variable/geist-mono'
 import './styles.css'
 import { App } from './App'
+import { UpdateBanner } from './Updates'
 import { completeSignIn, isSignedIn, loadConfig, signIn } from './auth'
 import { load, sync, useStore } from './store'
 
@@ -54,6 +55,7 @@ function Root() {
           <button className="btn" onClick={() => void signIn()}>Sign in again</button>
         </div>
       )}
+      <UpdateBanner />
       <App />
     </>
   )

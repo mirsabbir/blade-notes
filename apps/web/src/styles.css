@@ -118,6 +118,8 @@ kbd { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 11
 .overview { flex: 1; display: flex; flex-direction: column; align-items: center; justify-content: center; gap: 8px; padding: 24px; text-align: center; color: var(--muted-fg); }
 .overview h1 { margin: 8px 0 0; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--fg); }
 .overview p { margin: 0; font-size: 14px; }
+.overview-title { margin-top: 8px; width: min(100%, 420px); text-align: center; border: 1px solid transparent; border-radius: 8px; outline: 0; background: transparent; font-size: 22px; font-weight: 600; letter-spacing: -0.02em; color: var(--fg); padding: 2px 8px; }
+.overview-title:hover, .overview-title:focus { border-color: var(--border); }
 .overview-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 8px; margin-top: 16px; }
 
 /* ---- document ---- */
@@ -154,6 +156,17 @@ kbd { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 11
 .splash h1 { margin: 12px 0 0; font-size: 26px; font-weight: 600; letter-spacing: -0.02em; }
 .splash p { margin: 0 0 16px; color: var(--muted-fg); }
 .banner { display: flex; align-items: center; justify-content: center; gap: 12px; padding: 8px 16px; background: var(--today-bg); color: var(--today-fg); font-size: 14px; }
+
+/* ---- dialog (About & updates) ---- */
+.dialog-backdrop { position: fixed; inset: 0; z-index: 50; display: grid; place-items: center; padding: 16px; background: rgba(13, 17, 27, 0.4); }
+.dialog { width: min(440px, 100%); padding: 20px 22px 22px; border-radius: 14px; border: 1px solid var(--border); background: var(--bg); box-shadow: 0 16px 48px rgba(13, 17, 27, 0.2); }
+.dialog-head { display: flex; align-items: center; justify-content: space-between; }
+.dialog-head h2 { margin: 0; font-size: 17px; font-weight: 600; }
+.dialog-actions { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; margin-top: 16px; }
+.muted { color: var(--muted-fg); }
+.small { font-size: 13px; line-height: 1.5; }
+.update-error { flex-basis: 100%; margin: 0; font-size: 13px; color: var(--warn); }
+.btn:disabled { opacity: 0.6; cursor: default; }
 
 /* ---- phone ---- */
 @media (max-width: 760px) {
