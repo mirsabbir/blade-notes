@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { get, set } from 'idb-keyval'
-import { between, DEFAULT_SETTINGS, type Item, type PullResponse, type PushResponse, type Change, type Settings } from '@blade-notes/core'
+import { between, DEFAULT_SETTINGS, tooLarge, utf8Bytes, type Item, type PullResponse, type PushResponse, type Change, type Settings } from '@blade-notes/core'
 import { accessToken } from './auth'
 
 /**
@@ -16,6 +16,8 @@ interface State {
   cursor: number
   /** "item:<id>", "body:<id>" or "settings:settings" — records changed here and not yet accepted by the server. */
   pending: string[]
+  /** Pending records the server will not take (too large), with the reason; retried after the next edit. */
+  rejected?: { [key: string]: string }
 }
 export type SyncStatus = 'idle' | 'syncing' | 'offline' | 'signed-out' | 'error'
 
@@ -35,6 +37,9 @@ function commit(next: State) {
   emit()
   void set(DB_KEY, state)
 }
+/** The current state, for code outside React (the editor's start-up clean-up). */
+export const currentState = () => state
+
 export function useStore() {
   return useSyncExternalStore(
     (l) => (listeners.add(l), () => listeners.delete(l)),
@@ -51,7 +56,22 @@ export async function load(): Promise<void> {
 
 const now = () => new Date().toISOString()
 const newId = () => crypto.randomUUID()
-const mark = (p: string[], key: string) => (p.includes(key) ? p : [...p, key])
+/**
+ * Edits per record since the page loaded. A push only clears records that were not edited
+ * again while it was in flight; otherwise the pull that follows would bring back the
+ * server's older copy over the newer local edit.
+ */
+const edits = new Map<string, number>()
+const mark = (p: string[], key: string) => {
+  edits.set(key, (edits.get(key) ?? 0) + 1)
+  return p.includes(key) ? p : [...p, key]
+}
+/** An edit gives a rejected record another try. */
+function unreject(key: string): State['rejected'] {
+  if (!state.rejected?.[key]) return state.rejected
+  const { [key]: _, ...rest } = state.rejected
+  return rest
+}
 
 export function childrenOf(items: State['items'], parentId: string | null): Item[] {
   return Object.values(items)
@@ -94,6 +114,32 @@ export function createDescription(ownerId: string, title: string): string {
   return item.id
 }
 
+/** Takes description `descId` off the phrases and list items of body `bodyId`, when its editor is not open. */
+export function stripDescription(bodyId: string, descId: string): void {
+  const doc = state.bodies[bodyId]?.doc
+  if (!doc) return
+  type N = { type?: string; attrs?: { descId?: string | null }; marks?: { type: string; attrs?: { descId?: string } }[]; content?: N[] }
+  const walk = (n: N): N => ({
+    ...n,
+    ...(n.attrs?.descId === descId && { attrs: { ...n.attrs, descId: null } }),
+    ...(n.marks && { marks: n.marks.filter((m) => !(m.type === 'describe' && m.attrs?.descId === descId)) }),
+    ...(n.content && { content: n.content.map(walk) }),
+  })
+  setBody(bodyId, walk(doc as N))
+}
+
+/** Moves a description to the trash, with every description linked from inside it. */
+export function trashDescription(id: string): void {
+  const seen = new Set<string>()
+  const walk = (d: string) => {
+    if (seen.has(d) || !state.items[d]) return
+    seen.add(d)
+    for (const m of JSON.stringify(state.bodies[d]?.doc ?? {}).matchAll(/"descId":"([\w-]+)"/g)) walk(m[1]!)
+  }
+  walk(id)
+  seen.forEach((d) => trash(d))
+}
+
 /** Plain text of a Tiptap document, for search and previews. */
 export function docText(doc: unknown): string {
   if (!doc || typeof doc !== 'object') return ''
@@ -105,7 +151,7 @@ export function update(id: string, patch: Partial<Item>): void {
   const cur = state.items[id]
   if (!cur) return
   const item = { ...cur, ...patch, updatedAt: now() }
-  commit({ ...state, items: { ...state.items, [id]: item }, pending: mark(state.pending, `item:${id}`) })
+  commit({ ...state, items: { ...state.items, [id]: item }, pending: mark(state.pending, `item:${id}`), rejected: unreject(`item:${id}`) })
   scheduleSync()
 }
 
@@ -130,13 +176,13 @@ export const settingsOf = (s: State): Settings => ({ ...DEFAULT_SETTINGS, ...s.s
 
 export function updateSettings(patch: Partial<Omit<Settings, 'id'>>): void {
   const settings = { ...settingsOf(state), ...patch, updatedAt: now() }
-  commit({ ...state, settings, pending: mark(state.pending, 'settings:settings') })
+  commit({ ...state, settings, pending: mark(state.pending, 'settings:settings'), rejected: unreject('settings:settings') })
   scheduleSync()
 }
 
 export function setBody(id: string, doc: unknown): void {
   const seq = state.bodies[id]?.seq ?? 0
-  commit({ ...state, bodies: { ...state.bodies, [id]: { doc, seq } }, pending: mark(state.pending, `body:${id}`) })
+  commit({ ...state, bodies: { ...state.bodies, [id]: { doc, seq } }, pending: mark(state.pending, `body:${id}`), rejected: unreject(`body:${id}`) })
   scheduleSync()
 }
 
@@ -196,23 +242,53 @@ export async function sync(): Promise<void> {
   return running
 }
 
+/** Requests stay well under Lambda's 6 MB payload limit. */
+const BATCH_BYTES = 4_000_000
+
+function changeFor(key: string): Change | null {
+  const [kind, id] = key.split(':') as ['item' | 'body' | 'settings', string]
+  if (kind === 'settings') return { kind, data: settingsOf(state) }
+  if (kind === 'item') return state.items[id] ? { kind, data: state.items[id]! } : null
+  const b = state.bodies[id]
+  return b ? { kind, data: { id, doc: b.doc, updatedAt: now() }, baseSeq: b.seq } : null
+}
+
 async function pushPending(): Promise<void> {
-  while (state.pending.length) {
-    const batch = state.pending.slice(0, 100)
-    const changes: Change[] = batch.flatMap((key): Change[] => {
-      const [kind, id] = key.split(':') as ['item' | 'body' | 'settings', string]
-      if (kind === 'settings') return [{ kind, data: settingsOf(state) }]
-      if (kind === 'item') {
-        const data = state.items[id]
-        return data ? [{ kind, data }] : []
+  for (;;) {
+    const queue = state.pending.filter((k) => !state.rejected?.[k])
+    if (queue.length === 0) return
+    // Fill one request: at most 100 changes and BATCH_BYTES. Too-large records are set aside
+    // with their reason (shown to the user) instead of failing the whole sync again and again.
+    const batch: string[] = []
+    const changes: Change[] = []
+    const setAside: { [key: string]: string } = {}
+    let bytes = 0
+    for (const key of queue) {
+      const c = changeFor(key)
+      if (!c) {
+        batch.push(key) // deleted locally before it was ever sent: nothing to push
+        continue
       }
-      const b = state.bodies[id]
-      return b ? [{ kind, data: { id, doc: b.doc, updatedAt: now() }, baseSeq: b.seq }] : []
-    })
-    const res = await call<PushResponse>('POST', '/api/sync', { changes })
-    // Records edited again while the request was in flight stay pending.
-    const sent = new Set(batch)
-    let next = { ...state, pending: state.pending.filter((k) => !sent.has(k)) }
+      const why = tooLarge(c)
+      if (why) {
+        setAside[key] = why
+        continue
+      }
+      const n = utf8Bytes(JSON.stringify(c))
+      if (changes.length && (changes.length >= 100 || bytes + n > BATCH_BYTES)) break
+      batch.push(key)
+      changes.push(c)
+      bytes += n
+    }
+    if (Object.keys(setAside).length) commit({ ...state, rejected: { ...state.rejected, ...setAside } })
+    if (batch.length === 0) continue
+
+    const version = new Map(batch.map((k) => [k, edits.get(k) ?? 0]))
+    const res: PushResponse = changes.length ? await call<PushResponse>('POST', '/api/sync', { changes }) : { accepted: [], conflicts: [] }
+    const turnedAway = Object.fromEntries((res.rejected ?? []).map((r) => [`${r.kind}:${r.id}`, r.reason]))
+    // Records edited again while the request was in flight stay pending; turned-away ones wait for an edit.
+    const sent = new Set(batch.filter((k) => !turnedAway[k] && (edits.get(k) ?? 0) === version.get(k)))
+    let next: State = { ...state, pending: state.pending.filter((k) => !sent.has(k)), rejected: { ...state.rejected, ...turnedAway } }
     for (const a of res.accepted) {
       if (a.kind === 'body' && next.bodies[a.id]) next.bodies = { ...next.bodies, [a.id]: { ...next.bodies[a.id]!, seq: a.seq } }
     }

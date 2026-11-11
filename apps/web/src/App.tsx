@@ -8,7 +8,7 @@ import { useOpenUpdatesFromMenu } from './Updates'
 import { SettingsDialog, type SettingsSection } from './Settings'
 import { Attachments, DropZone } from './Attachments'
 import { childrenOf, clearFresh, create, createDescription, docText, freshId, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
-import { Description, type OpenDescription } from './Description'
+import { Description, TooLarge, type OpenDescription } from './Description'
 import type { DescribeHooks } from './describe'
 
 const DEFAULT_TITLE = { space: 'New space', folder: 'New folder', note: 'Untitled', task: 'New task' } as const
@@ -35,6 +35,22 @@ function usePersisted<T>(key: string, initial: T) {
     }
   }, [key, v])
   return [v, setV] as const
+}
+
+// Widths from styles.css: a blade, a folded strip, the note's minimum, the description blade.
+const BLADE = 256
+const STRIP = 44
+const EDITOR_MIN = 400
+const DESC_PANEL = 340
+
+function useWindowWidth(): number {
+  const [w, setW] = useState(window.innerWidth)
+  useEffect(() => {
+    const on = () => setW(window.innerWidth)
+    window.addEventListener('resize', on)
+    return () => window.removeEventListener('resize', on)
+  }, [])
+  return w
 }
 
 export function App() {
@@ -76,7 +92,11 @@ export function App() {
     create: (title) => (selected ? createDescription(selected.id, title) : ''),
   }
 
-  const maxOpen = settingsOf(state).bladesOpen
+  // Fold as many blades as it takes for the note (and an open description blade) to fit the window.
+  const width = useWindowWidth()
+  const panelOpen = descs.length > 0 && settingsOf(state).descriptionView === 'panel' && width > 900
+  const fits = Math.floor((width - EDITOR_MIN - (panelOpen ? DESC_PANEL : 0) - STRIP * chain.length) / BLADE)
+  const maxOpen = width <= 720 ? settingsOf(state).bladesOpen : Math.max(panelOpen ? 0 : 1, Math.min(settingsOf(state).bladesOpen, fits))
   const folded = (i: number) => focus || (manual[i] ?? i < chain.length - maxOpen)
 
   return (
@@ -129,7 +149,8 @@ export function App() {
         bodies={state.bodies}
         items={items}
         status={status}
-        pendingCount={state.pending.length}
+        pendingCount={state.pending.filter((k) => !state.rejected?.[k]).length}
+        rejected={state.rejected ?? {}}
         focus={focus}
         onFocus={() => {
           setFocus(!focus)
@@ -460,6 +481,22 @@ function Row({ item, items, active, onOpen, subtitle }: { item: Item; items: { [
 const STATUS_LABEL: { [s in TaskStatus]: string } = { todo: 'To do', doing: 'In progress', done: 'Done' }
 const NEXT: { [s in TaskStatus]: TaskStatus } = { todo: 'doing', doing: 'done', done: 'todo' }
 
+/** Records the server turned away (too large): named, with the reason, never just a silent failed sync. */
+function Unsynced({ rejected, items }: { rejected: { [key: string]: string }; items: { [id: string]: Item } }) {
+  const keys = Object.keys(rejected)
+  if (keys.length === 0) return null
+  const name = (key: string) => {
+    const [kind, id] = key.split(':')
+    return kind === 'settings' ? 'Settings' : `“${items[id!]?.title ?? 'Untitled'}”${kind === 'body' ? ' (text)' : ''}`
+  }
+  const detail = keys.map((k) => `${name(k)}: ${rejected[k]}`).join('\n')
+  return (
+    <button type="button" className="sync warn" title={detail} onClick={() => alert(`Not saved to the cloud yet — kept on this device:\n\n${detail}`)}>
+      <AlertTriangle size={14} aria-hidden /> {keys.length === 1 ? '1 change can’t sync' : `${keys.length} changes can’t sync`}
+    </button>
+  )
+}
+
 function SyncBadge({ status, pending }: { status: SyncStatus; pending: number }) {
   if (status === 'signed-out') return <span className="sync warn"><AlertTriangle size={14} aria-hidden /> Signed out — changes stay on this device</span>
   if (status === 'offline') return <span className="sync"><CloudOff size={14} aria-hidden /> Offline{pending ? ` · ${pending} to sync` : ''}</span>
@@ -475,6 +512,7 @@ function EditorPane(props: {
   items: { [id: string]: Item }
   status: SyncStatus
   pendingCount: number
+  rejected: { [key: string]: string }
   focus: boolean
   onFocus: () => void
   describe: DescribeHooks
@@ -507,7 +545,9 @@ function EditorPane(props: {
           )}
           {crumbs.length === 0 && !selected && <span className="crumb-now">Library</span>}
         </nav>
-        <SyncBadge status={props.status} pending={props.pendingCount} />
+        <Unsynced rejected={props.rejected} items={props.items} />
+        {/* "Saved" next to "can't sync" would contradict it. */}
+        {!(Object.keys(props.rejected).length && props.status === 'idle' && !props.pendingCount) && <SyncBadge status={props.status} pending={props.pendingCount} />}
         <button type="button" className={props.focus ? 'btn on' : 'btn'} aria-pressed={props.focus} onClick={props.onFocus} title="Fold every blade">
           <Maximize2 size={14} aria-hidden /> Focus
         </button>
@@ -518,6 +558,7 @@ function EditorPane(props: {
           <div className="editor-scroll">
             <div className="editor-body">
               <TitleRow item={selected} />
+              <TooLarge reason={props.rejected[`body:${selected.id}`] ?? props.rejected[`item:${selected.id}`]} />
               {selected.type === 'task' && <TaskFields item={selected} />}
               <Attachments item={selected} uploading={uploading} onUploading={setUploading} />
               {selected.type === 'task' && <div className="label">Description</div>}

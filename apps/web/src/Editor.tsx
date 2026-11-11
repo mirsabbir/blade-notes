@@ -12,8 +12,8 @@ import {
   Bold, Italic, Underline, Strikethrough, Code, Highlighter, List, ListOrdered, ListTodo,
   TextQuote, SquareCode, Table, Link, ImagePlus, Undo2, Redo2, NotebookText,
 } from 'lucide-react'
-import { docText, setBody, settingsOf, uploadImage, useStore } from './store'
-import { Describe, DescribeMark, describeSelection, type DescribeHooks } from './describe'
+import { currentState, docText, setBody, settingsOf, stripDescription, uploadImage, useStore } from './store'
+import { Describe, DescribeMark, describeSelection, describedIds, removeDescription, type DescribeHooks } from './describe'
 
 interface Props {
   id: string
@@ -29,7 +29,16 @@ export function Editor({ id, doc, placeholder, describe }: Props) {
   const latest = useRef(describe)
   latest.current = describe
   // One stable object for the extension; it always calls the caller's latest handlers.
-  const hooks = useMemo<DescribeHooks>(() => ({ open: (...a) => latest.current.open(...a), create: (t) => latest.current.create(t) }), [])
+  // `remove` is called later, maybe after this editor has closed (a nested description was open
+  // on top of it): then the stored document is edited instead.
+  const hooks = useMemo<DescribeHooks>(
+    () => ({
+      open: (descId, anchor, remove) =>
+        latest.current.open(descId, anchor, () => (editorRef.current && !editorRef.current.isDestroyed ? remove() : stripDescription(id, descId))),
+      create: (t) => latest.current.create(t),
+    }),
+    [id],
+  )
   const [peek, setPeek] = useState<{ id: string; rect: DOMRect } | null>(null)
   const editor = useEditor({
     extensions: [
@@ -61,6 +70,12 @@ export function Editor({ id, doc, placeholder, describe }: Props) {
   })
   const editorRef = useRef<TiptapEditor | null>(null)
   editorRef.current = editor
+
+  // Links to descriptions deleted elsewhere turn back into plain text.
+  useEffect(() => {
+    const { items } = currentState()
+    for (const d of describedIds(editor)) if (items[d]?.deletedAt) removeDescription(editor, d)
+  }, [editor])
 
   // Flush a pending save when leaving the note.
   useEffect(

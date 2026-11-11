@@ -108,4 +108,6 @@ export interface PushResponse {
   accepted: { kind: Change['kind']; id: string; seq: number }[]
   /** Bodies someone else changed after `baseSeq`: the server kept its copy, the client keeps its own as a copy. */
   conflicts: { id: string; server: Body; seq: number }[]
+  /** Changes the server will not store (too large); everything else in the request was handled. */
+  rejected?: { kind: Change['kind']; id: string; reason: string }[]
 }

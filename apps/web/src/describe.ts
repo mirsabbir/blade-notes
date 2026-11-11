@@ -168,3 +168,14 @@ export function removeDescription(editor: Editor, id: string): void {
   })
   if (tr.docChanged) editor.view.dispatch(tr)
 }
+
+/** Every description id linked from this document. */
+export function describedIds(editor: Editor): Set<string> {
+  const ids = new Set<string>()
+  editor.state.doc.descendants((node: PMNode) => {
+    if (LIST_ITEMS.includes(node.type.name) && node.attrs.descId) ids.add(node.attrs.descId as string)
+    for (const m of node.marks) if (m.type.name === 'describe' && m.attrs.descId) ids.add(m.attrs.descId as string)
+    return true
+  })
+  return ids
+}

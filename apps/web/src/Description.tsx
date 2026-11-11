@@ -1,8 +1,8 @@
 import { useEffect, useRef, useState } from 'react'
-import { ArrowLeft, Trash2, X } from 'lucide-react'
+import { AlertTriangle, ArrowLeft, Trash2, X } from 'lucide-react'
 import { Editor } from './Editor'
 import { Attachments, DropZone } from './Attachments'
-import { createDescription, settingsOf, trash, update, useStore } from './store'
+import { createDescription, settingsOf, trashDescription, update, useStore } from './store'
 import type { DescribeHooks } from './describe'
 
 /** One open description; `remove` takes its mark or list-item link out of the document it came from. */
@@ -29,7 +29,7 @@ export function Description({ stack, onChange }: { stack: OpenDescription[]; onC
   const back = () => onChange(stack.slice(0, -1))
 
   useEffect(() => {
-    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && close()
+    const onKey = (e: KeyboardEvent) => e.key === 'Escape' && back()
     // A popup closes on a click anywhere else (but not on another description, which replaces it).
     const onDown = (e: PointerEvent) => {
       const t = e.target as HTMLElement
@@ -43,16 +43,25 @@ export function Description({ stack, onChange }: { stack: OpenDescription[]; onC
     }
   })
 
-  if (!item || item.deletedAt) return null
+  // Deleted (here or on another device) while its link was still in the text: step back.
+  const gone = !item || !!item.deletedAt
+  useEffect(() => {
+    if (!gone) return
+    top.remove() // the link it left behind becomes plain text
+    back()
+  })
+  if (gone) return null
 
   const hooks: DescribeHooks = {
     open: (id, anchor, remove) => onChange([...stack, { id, rect: anchor.getBoundingClientRect(), remove }]),
     create: (title) => createDescription(owner?.id ?? item.id, title),
   }
+  // Where this description sits: the note, then each description opened on the way here.
+  const path = [owner?.title, ...stack.slice(0, -1).map((e) => state.items[e.id]?.title)].filter(Boolean).join(' › ') || 'Description'
   const remove = () => {
     if (!confirm(`Remove the description “${item.title}”? The text it belongs to stays.`)) return
     top.remove()
-    trash(item.id)
+    trashDescription(item.id)
     back()
   }
 
@@ -66,7 +75,7 @@ export function Description({ stack, onChange }: { stack: OpenDescription[]; onC
             <ArrowLeft size={15} aria-hidden />
           </button>
         )}
-        <span className="desc-crumb">{owner ? `${owner.title} › Description` : 'Description'}</span>
+        <span className="desc-crumb" title={path}>{path}</span>
         <button type="button" className="ghost" aria-label="Remove this description" title="Remove description" onClick={remove}>
           <Trash2 size={15} aria-hidden />
         </button>
@@ -75,9 +84,9 @@ export function Description({ stack, onChange }: { stack: OpenDescription[]; onC
         </button>
       </header>
       <DropZone item={item} onUploading={setUploading}>
-        <div className="desc-scroll">
+        {/* One key for the whole content, so each description gets a fresh editor and title. */}
+        <div className="desc-scroll" key={item.id}>
           <input
-            key={item.id}
             className="desc-title"
             defaultValue={item.title}
             aria-label="Description title"
@@ -88,7 +97,8 @@ export function Description({ stack, onChange }: { stack: OpenDescription[]; onC
             }}
             onKeyDown={(e) => e.key === 'Enter' && (e.target as HTMLInputElement).blur()}
           />
-          <Editor key={item.id} id={item.id} doc={state.bodies[item.id]?.doc} placeholder="Write the details: steps, links, a checklist." describe={hooks} />
+          <TooLarge reason={state.rejected?.[`body:${item.id}`] ?? state.rejected?.[`item:${item.id}`]} />
+          <Editor id={item.id} doc={state.bodies[item.id]?.doc} placeholder="Write the details: steps, links, a checklist." describe={hooks} />
           <Attachments item={item} uploading={uploading} onUploading={setUploading} />
         </div>
       </DropZone>
@@ -105,12 +115,28 @@ export function Description({ stack, onChange }: { stack: OpenDescription[]; onC
     const r = stack[0]!.rect
     const width = Math.min(460, window.innerWidth - 16)
     const left = Math.max(8, Math.min(r.left, window.innerWidth - width - 8))
-    const below = r.bottom + 8 + 420 < window.innerHeight
+    // Open on the side of the line with more room, never taller than that room.
+    const spaceBelow = window.innerHeight - r.bottom - 16
+    const spaceAbove = r.top - 16
+    const below = spaceBelow >= 420 || spaceBelow >= spaceAbove
+    const maxHeight = Math.min(460, below ? spaceBelow : spaceAbove)
+    const place = below ? { top: r.bottom + 8 } : { bottom: window.innerHeight - r.top + 8 }
     return (
-      <div className="desc-pop-anchor" style={{ left, width, ...(below ? { top: r.bottom + 8 } : { bottom: window.innerHeight - r.top + 8 }) }}>
+      <div className="desc-pop-anchor" style={{ left, width, ...place, ['--pop-max' as string]: `${maxHeight}px` }}>
         {body}
       </div>
     )
   }
   return body
 }
+
+/** Shown inside a note, task or description the server would not store. */
+export function TooLarge({ reason }: { reason?: string }) {
+  if (!reason) return null
+  return (
+    <p className="too-large" role="alert">
+      <AlertTriangle size={15} aria-hidden /> Not saved to the cloud — kept on this device only: {reason}
+    </p>
+  )
+}
+

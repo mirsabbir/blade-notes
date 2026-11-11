@@ -5,7 +5,7 @@ import { S3Client, GetObjectCommand } from '@aws-sdk/client-s3'
 import { createPresignedPost } from '@aws-sdk/s3-presigned-post'
 import { getSignedUrl } from '@aws-sdk/s3-request-presigner'
 import type { APIGatewayProxyEventV2WithJWTAuthorizer as Event, APIGatewayProxyResultV2 as Result } from 'aws-lambda'
-import type { Body, Change, PullResponse, PushRequest, PushResponse, Record } from '@blade-notes/core'
+import { tooLarge, type Body, type Change, type PullResponse, type PushRequest, type PushResponse, type Record } from '@blade-notes/core'
 
 /**
  * One table, one partition per user:
@@ -91,15 +91,21 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
   const changes = req.changes
   if (!Array.isArray(changes) || changes.length > MAX_CHANGES) throw new BadRequest(`changes must be a list of at most ${MAX_CHANGES}`)
   for (const c of changes) validate(c)
-  const out: PushResponse = { accepted: [], conflicts: [] }
-  if (changes.length === 0) return out
-  let seq = await reserve(pk, changes.length)
-  for (const c of changes) {
+  const out: PushResponse = { accepted: [], conflicts: [], rejected: [] }
+  // A change that is too large is turned away on its own; the rest of the request still saves.
+  const fits = changes.filter((c) => {
+    const reason = tooLarge(c)
+    if (reason) out.rejected!.push({ kind: c.kind, id: c.data.id, reason })
+    return !reason
+  })
+  if (fits.length === 0) return out
+  let seq = await reserve(pk, fits.length)
+  for (const c of fits) {
     const mine = seq++
     const sk = `${c.kind.toUpperCase()}#${c.data.id}`
     const put = new PutCommand({
       TableName: TABLE,
-      Item: { pk, sk, seq: mine, kind: c.kind, data: c.kind === 'body' ? { ...c.data, doc: JSON.stringify(c.data.doc) } : c.data },
+      Item: { pk, sk, seq: mine, kind: c.kind, data: toStored(c) },
       // A body only overwrites the version its edit started from; items are last-write-wins.
       ...(c.kind === 'body' && {
         ConditionExpression: 'attribute_not_exists(seq) OR seq <= :base',
@@ -110,6 +116,11 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
       await db.send(put)
       out.accepted.push({ kind: c.kind, id: c.data.id, seq: mine })
     } catch (err) {
+      // DynamoDB's own limits (400 KB per item) back up tooLarge(): still only this change fails.
+      if ((err as Error).name === 'ValidationException') {
+        out.rejected!.push({ kind: c.kind, id: c.data.id, reason: 'the database refused it as too large.' })
+        continue
+      }
       if (!(err instanceof ConditionalCheckFailedException)) throw err
       const current = await db.send(new GetCommand({ TableName: TABLE, Key: { pk, sk } }))
       out.conflicts.push({ id: c.data.id, server: fromStored('body', current.Item!.data) as Body, seq: current.Item!.seq as number })
@@ -122,7 +133,11 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
  * A body's document is stored as a JSON string: DynamoDB allows only 32 levels of
  * nested maps/lists, and a Tiptap doc with deeply nested lists goes past that.
  */
-function fromStored(kind: string, data: { doc?: unknown }) {
+export function toStored(c: Change) {
+  return c.kind === 'body' ? { ...c.data, doc: JSON.stringify(c.data.doc) } : c.data
+}
+
+export function fromStored(kind: string, data: { doc?: unknown }) {
   return kind === 'body' && typeof data.doc === 'string' ? { ...data, doc: JSON.parse(data.doc) } : data
 }
 
@@ -131,7 +146,6 @@ function validate(c: Change): void {
   if (typeof id !== 'string' || !/^[A-Za-z0-9_-]{1,64}$/.test(id)) throw new BadRequest('each change needs a safe id')
   if (c.kind === 'body') {
     if (typeof c.baseSeq !== 'number') throw new BadRequest('a body change needs baseSeq')
-    if (JSON.stringify(c.data).length > 350_000) throw new BadRequest(`body ${id} is over 350 kB; move images to uploads`)
   } else if (c.kind === 'settings') {
     if (id !== 'settings') throw new BadRequest('the settings record has id "settings"')
   } else if (c.kind !== 'item') {
@@ -149,7 +163,9 @@ const FILE_NAME = /^[0-9a-f-]{36}\.[a-z0-9]{1,10}$/
 async function upload(sub: string, req: { contentType?: string; name?: string; size?: number }) {
   if (typeof req.size !== 'number' || req.size <= 0 || req.size > MAX_FILE) throw new BadRequest('files must be 1 byte to 50 MB')
   const ext = /\.([a-z0-9]{1,10})$/i.exec(req.name ?? '')?.[1]?.toLowerCase() ?? 'bin'
-  const contentType = /^[\w.+-]+\/[\w.+-]+$/.test(req.contentType ?? '') ? req.contentType! : 'application/octet-stream'
+  const base = /^[\w.+-]+\/[\w.+-]+$/.test(req.contentType ?? '') ? req.contentType! : 'application/octet-stream'
+  // Text files are UTF-8 here; without the charset a browser may show them garbled when opened in place.
+  const contentType = base.startsWith('text/') ? `${base}; charset=utf-8` : base
   const key = `${randomUUID()}.${ext}`
   const post = await createPresignedPost(s3, {
     Bucket: BUCKET,
