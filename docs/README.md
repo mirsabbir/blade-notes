@@ -2,6 +2,8 @@
 
 Everything here is documentation: none of it is built or deployed (the site ships only `apps/web`). Agents start at [../AGENTS.md](../AGENTS.md).
 
+**What the owner still has to set up** (two-step sign-in, vault, calendars): [runbooks/owner-setup.md](runbooks/owner-setup.md).
+
 | Folder | Holds | Rule |
 |---|---|---|
 | [architecture/](architecture/) | How each part works, one topic per file | Update the topic's file when behaviour changes, in the same commit |

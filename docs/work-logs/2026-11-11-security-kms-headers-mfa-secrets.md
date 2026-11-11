@@ -53,5 +53,5 @@ Commit `53c69bb` and follow-ups; deployed with no replaced resources. Details: [
 ## Open
 
 - ~~Confirm the alert email~~: confirmed 2026-11-12 (the first confirmation had not registered; resent).
-- Owner: set up two-step sign-in and the vault in Settings › Security.
+- Owner: set up two-step sign-in and the vault in Settings › Security — steps in [owner-setup.md](../runbooks/owner-setup.md).
 - Older versions of the 4 pre-switch files remain under the S3 key; delete them if version history is not needed.

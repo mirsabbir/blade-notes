@@ -60,5 +60,5 @@ Not testable here: switching the device's time zone (unit tests cover Dhaka → 
 
 ## Open
 
-- Owner: register the Google (and, if wanted, Microsoft) OAuth app — [calendar-setup.md](../runbooks/calendar-setup.md); or connect iCloud from Settings.
+- Owner: register the Google (and, if wanted, Microsoft) OAuth app — [owner-setup.md](../runbooks/owner-setup.md#4-calendars), [calendar-setup.md](../runbooks/calendar-setup.md); or connect iCloud from Settings.
 - Two-way sync (moving an event in the calendar moves it here) is not built.
