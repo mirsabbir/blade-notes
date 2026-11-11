@@ -12,7 +12,7 @@ import {
   Bold, Italic, Underline, Strikethrough, Code, Highlighter, List, ListOrdered, ListTodo,
   TextQuote, SquareCode, Table, Link, ImagePlus, Undo2, Redo2, NotebookText, CalendarPlus, Lock,
 } from 'lucide-react'
-import { currentState, docText, fileBlobUrl, reconcileEvents, setBody, settingsOf, stripDescription, uploadImage, useStore } from './store'
+import { currentState, docText, fileBlobUrl, onFlush, reconcileEvents, setBody, settingsOf, stripDescription, uploadImage, useStore } from './store'
 import { Describe, DescribeMark, describeSelection, describedIds, removeDescription, type DescribeHooks } from './describe'
 import { DateChip, dateQueryKey, startSchedule, type DateQuery, type ScheduleHooks } from './schedule'
 import { ChipPopover, DatePicker } from './DatePicker'
@@ -111,7 +111,10 @@ export function Editor({ id, doc, placeholder, describe, flash, flashKey, onOpen
     },
     onUpdate: ({ editor }) => {
       clearTimeout(save.current)
-      save.current = setTimeout(() => saveDoc(id, editor.getJSON()), 500)
+      save.current = setTimeout(() => {
+        save.current = undefined
+        saveDoc(id, editor.getJSON())
+      }, 500)
     },
     immediatelyRender: true,
   })
@@ -124,16 +127,20 @@ export function Editor({ id, doc, placeholder, describe, flash, flashKey, onOpen
     for (const d of describedIds(editor)) if (items[d]?.deletedAt) removeDescription(editor, d)
   }, [editor])
 
-  // Flush a pending save when leaving the note.
-  useEffect(
-    () => () => {
-      if (save.current && editorRef.current) {
-        clearTimeout(save.current)
-        saveDoc(id, editorRef.current.getJSON())
-      }
-    },
-    [id],
-  )
+  // Save the pending text at once when leaving the note, or when the app closes or hides.
+  useEffect(() => {
+    const flush = () => {
+      if (!save.current || !editorRef.current) return
+      clearTimeout(save.current)
+      save.current = undefined
+      saveDoc(id, editorRef.current.getJSON())
+    }
+    const off = onFlush(flush)
+    return () => {
+      off()
+      flush()
+    }
+  }, [id])
 
   // Opened from the Agenda or a calendar link: show that date and make it flash.
   useEffect(() => {

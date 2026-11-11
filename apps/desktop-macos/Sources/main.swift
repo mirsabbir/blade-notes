@@ -35,6 +35,25 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
         web.load(URLRequest(url: appURL))
     }
 
+    /// Closing the window keeps the app (and an upload) running; quitting does not. So Quit asks
+    /// the page first: mid-upload it offers to keep the app open. Then it waits a moment, so the
+    /// page's last save reaches disk.
+    func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        web.evaluateJavaScript("window.__bladeBusy ? window.__bladeBusy() : null") { result, _ in
+            if let why = result as? String, !why.isEmpty {
+                let alert = NSAlert()
+                alert.alertStyle = .warning
+                alert.messageText = "Quit Blade Notes?"
+                alert.informativeText = why
+                alert.addButton(withTitle: "Keep Open")
+                alert.addButton(withTitle: "Quit Anyway")
+                if alert.runModal() != .alertSecondButtonReturn { return NSApp.reply(toApplicationShouldTerminate: false) }
+            }
+            DispatchQueue.main.asyncAfter(deadline: .now() + 0.4) { NSApp.reply(toApplicationShouldTerminate: true) }
+        }
+        return .terminateLater
+    }
+
     func applicationShouldHandleReopen(_ app: NSApplication, hasVisibleWindows: Bool) -> Bool {
         if !hasVisibleWindows { window.makeKeyAndOrderFront(nil) }
         return true

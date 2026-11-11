@@ -51,6 +51,17 @@ sequenceDiagram
 - While a record is pending on a device, pulled versions of it are skipped until the push lands.
 - Devices sync on start, every 10 s while visible, and on focus or reconnect. The same tick checks the clock: when the day or the device's time zone changed, everything redraws (see [03](03-dates-and-agenda.md#time-zones)).
 
+## Closing the app
+
+What a sudden close can lose, and what the app does about it (`closeWarning()` in `store.ts`):
+
+| In progress | At risk? | Done |
+|---|---|---|
+| File upload (straight to S3, cannot resume) | yes | browser: leave-page prompt; macOS: Quit asks "Keep Open / Quit Anyway" (closing the window keeps the app and the upload running); Windows: closing asks; the header shows "Uploading a file…" |
+| Text typed in the last 500 ms (editor saves after a pause) | yes | saved at once when the app hides or closes (`onFlush`) |
+| Write of the library to IndexedDB (milliseconds) | briefly | browser prompts if one is under way; desktop apps wait 0.4 s before quitting |
+| Changes not yet pushed ("Saving…") | no | already on the device; they sync the next time the app opens, so no prompt |
+
 ## Sign-in
 
 Cognito user pool with sign-up off. The web app uses the authorization-code flow with PKCE (`apps/web/src/auth.ts`). The HTTP API checks the access token's JWT on every route except `/api/calendar/callback` (the provider's redirect; a one-time state is its key). Files need sign-in too: `GET /api/files/<owner>/<uuid>.<ext>` answers the owner only, with a 60-second signed S3 link the app fetches into memory. Details: [02-security.md](02-security.md).

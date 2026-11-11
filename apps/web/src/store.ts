@@ -26,16 +26,21 @@ let state: State = { items: {}, bodies: {}, cursor: 0, pending: [] }
 let status = 'idle' as SyncStatus
 let loaded = false
 const listeners = new Set<() => void>()
-let snapshot: { state: State; status: SyncStatus; loaded: boolean } = { state, status, loaded }
+/** Files on their way to S3 right now; an upload cannot resume, so closing the app loses it. */
+let uploading = 0
+/** Writes of the library to IndexedDB that have not finished yet (a few milliseconds each). */
+let writing = 0
+let snapshot: { state: State; status: SyncStatus; loaded: boolean; uploading: number } = { state, status, loaded, uploading }
 
 function emit() {
-  snapshot = { state, status, loaded }
+  snapshot = { state, status, loaded, uploading }
   listeners.forEach((l) => l())
 }
 function commit(next: State) {
   state = next
   emit()
-  void set(DB_KEY, state)
+  writing++
+  void set(DB_KEY, state).finally(() => writing--)
 }
 /** The current state, for code outside React (the editor's start-up clean-up). */
 export const currentState = () => state
@@ -446,6 +451,40 @@ export const MAX_FILE_MB = 50
 
 /** Uploads one file straight to S3 (presigned POST) and returns its `/api/files/...` address. */
 export async function uploadFile(file: File): Promise<string> {
+  uploading++
+  emit()
+  try {
+    return await upload(file)
+  } finally {
+    uploading--
+    emit()
+  }
+}
+
+// ---- closing the app ----
+
+const flushers = new Set<() => void>()
+/** Editors register here, so closing or hiding the app saves their last keystrokes at once. */
+export function onFlush(save: () => void): () => void {
+  flushers.add(save)
+  return () => flushers.delete(save)
+}
+
+/** The warning an upload in flight deserves, or null. */
+export const uploadWarning = (): string | null =>
+  uploading === 0 ? null : uploading === 1 ? 'A file is still uploading. Closing now cancels it.' : `${uploading} files are still uploading. Closing now cancels them.`
+
+/**
+ * Called when the app is about to close or hide. Saves every editor's pending text, then says
+ * what would still be lost: an upload, or a write to this device still under way. Changes only
+ * waiting for the cloud are safe (they are on this device and sync next time), so they get none.
+ */
+export function closeWarning(): string | null {
+  flushers.forEach((f) => f())
+  return uploadWarning() ?? (writing ? 'Your last change is still being saved on this device.' : null)
+}
+
+async function upload(file: File): Promise<string> {
   if (file.size > MAX_FILE_MB * 1024 * 1024) throw new Error(`${file.name} is over ${MAX_FILE_MB} MB`)
   const type = file.type || 'application/octet-stream'
   const { upload, src } = await call<{ upload: { url: string; fields: { [k: string]: string } }; src: string }>(

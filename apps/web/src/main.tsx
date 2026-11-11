@@ -6,7 +6,7 @@ import './styles.css'
 import { App } from './App'
 import { UpdateBanner } from './Updates'
 import { completeSignIn, isSignedIn, loadConfig, signIn } from './auth'
-import { checkClock, load, sync, useStore } from './store'
+import { checkClock, closeWarning, load, sync, uploadWarning, useStore } from './store'
 
 function Root() {
   const [phase, setPhase] = useState<'starting' | 'signed-out' | 'ready' | 'failed'>('starting')
@@ -78,6 +78,21 @@ function Splash({ title, text, action }: { title: string; text: string; action?:
       {action && <button className="btn primary" onClick={action.run}>{action.label}</button>}
     </div>
   )
+}
+
+// Closing the tab mid-upload, or a moment after typing, asks first (the browser shows its own
+// wording). Hiding the app saves pending text at once: on a phone that is often the last chance.
+window.addEventListener('beforeunload', (e) => {
+  const why = closeWarning()
+  if (!why) return
+  e.preventDefault()
+  e.returnValue = why // older browsers want a value; none show it
+})
+document.addEventListener('visibilitychange', () => document.visibilityState === 'hidden' && closeWarning())
+// The desktop apps ask this before they quit; they wait a moment for the last save themselves.
+;(window as unknown as { __bladeBusy: () => string | null }).__bladeBusy = () => {
+  closeWarning()
+  return uploadWarning()
 }
 
 createRoot(document.getElementById('root')!).render(

@@ -58,7 +58,7 @@ function useWindowWidth(): number {
 }
 
 export function App() {
-  const { state, status } = useStore()
+  const { state, status, uploading } = useStore()
   const items = state.items
   const [path, setPath] = usePersisted<string[]>('bn:path', [])
   const [manual, setManual] = useState<{ [blade: number]: boolean }>({})
@@ -183,6 +183,7 @@ export function App() {
       ])}
       <EditorPane
         flash={flash}
+        uploading={uploading}
         chain={chain}
         selected={selected}
         bodies={state.bodies}
@@ -551,7 +552,8 @@ function Unsynced({ rejected, items }: { rejected: { [key: string]: string }; it
   )
 }
 
-function SyncBadge({ status, pending }: { status: SyncStatus; pending: number }) {
+function SyncBadge({ status, pending, uploading }: { status: SyncStatus; pending: number; uploading: number }) {
+  if (uploading) return <span className="sync"><RefreshCw size={14} aria-hidden className="spin" /> Uploading {uploading === 1 ? 'a file' : `${uploading} files`}…</span>
   if (status === 'signed-out') return <span className="sync warn"><AlertTriangle size={14} aria-hidden /> Signed out — changes stay on this device</span>
   if (status === 'offline') return <span className="sync"><CloudOff size={14} aria-hidden /> Offline{pending ? ` · ${pending} to sync` : ''}</span>
   if (status === 'error') return <button className="sync warn" onClick={() => void sync()}><AlertTriangle size={14} aria-hidden /> Sync failed — retry</button>
@@ -561,6 +563,7 @@ function SyncBadge({ status, pending }: { status: SyncStatus; pending: number })
 
 function EditorPane(props: {
   flash?: { id: string; n: number }
+  uploading: number
   chain: (Item | null)[]
   selected: Item | null
   bodies: { [id: string]: { doc: unknown; seq: number } }
@@ -614,7 +617,7 @@ function EditorPane(props: {
         </nav>
         <Unsynced rejected={props.rejected} items={props.items} />
         {/* "Saved" next to "can't sync" would contradict it. */}
-        {!(Object.keys(props.rejected).length && props.status === 'idle' && !props.pendingCount) && <SyncBadge status={props.status} pending={props.pendingCount} />}
+        {!(Object.keys(props.rejected).length && props.status === 'idle' && !props.pendingCount) && <SyncBadge status={props.status} pending={props.pendingCount} uploading={props.uploading} />}
         {selected && (
           <button type="button" className="btn" onClick={() => void copy()} title="Copy everything: text, dates, descriptions, as rich text and Markdown">
             {copied === 'yes' ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}

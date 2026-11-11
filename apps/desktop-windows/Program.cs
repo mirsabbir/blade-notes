@@ -39,7 +39,28 @@ sealed class MainWindow : Form
         RestoreBounds_();
         Controls.Add(web);
         Load += async (_, _) => await Start();
-        FormClosing += (_, _) => SaveBounds();
+        FormClosing += OnClosing;
+    }
+
+    bool closing;
+
+    /// Closing asks the page first: mid-upload it offers to keep the window open. Then it waits
+    /// a moment, so the page's last save reaches disk. Windows shutting down is never held up.
+    async void OnClosing(object? sender, FormClosingEventArgs e)
+    {
+        if (closing || web.CoreWebView2 is null || e.CloseReason == CloseReason.WindowsShutDown)
+        {
+            SaveBounds();
+            return;
+        }
+        e.Cancel = true;
+        var why = JsonSerializer.Deserialize<string?>(await web.CoreWebView2.ExecuteScriptAsync("window.__bladeBusy ? window.__bladeBusy() : null"));
+        if (!string.IsNullOrEmpty(why) &&
+            MessageBox.Show(this, $"{why}\n\nClose Blade Notes anyway?", "Blade Notes", MessageBoxButtons.YesNo, MessageBoxIcon.Warning, MessageBoxDefaultButton.Button2) != DialogResult.Yes)
+            return;
+        await Task.Delay(400);
+        closing = true;
+        Close();
     }
 
     async Task Start()
