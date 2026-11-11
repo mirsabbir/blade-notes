@@ -4,9 +4,10 @@ date: 2026-11-11
 status: "Live on the web and in the desktop apps (v0.1.0)."
 title: "Warn before closing mid-upload; save the last keystrokes on close"
 tags: [sync, uploads, desktop, beforeunload]
+source: docs/work-logs/2026-11-11-close-warnings.md
 ---
 
-# Warn before closing mid-upload
+# Warn before closing mid-upload; save the last keystrokes on close
 
 **Asked.** If the app is closed in the middle of a file upload, or while it is saving, should it not warn?
 

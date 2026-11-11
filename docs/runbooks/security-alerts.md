@@ -3,9 +3,10 @@ type: runbook
 date: 2026-11-11
 title: "Security alerts, the KMS key, and moving to your own key"
 tags: [security, kms, alerts, cloudtrail]
+source: docs/runbooks/security-alerts.md
 ---
 
-# Security alerts
+# Security alerts, the KMS key, and moving to your own key
 
 | Email subject says | Do |
 |---|---|

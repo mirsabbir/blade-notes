@@ -4,9 +4,10 @@ date: 2026-11-11
 status: "Live and checked; alert email confirmed 2026-11-12. Owner: turn on two-step sign-in, create the vault."
 title: "Security: KMS key at rest, headers and CSP, signed-in files, two-step sign-in, alerts, Secret blocks"
 tags: [security, kms, csp, hsts, mfa, cognito, cloudtrail, secret-blocks]
+source: docs/work-logs/2026-11-11-security-kms-headers-mfa-secrets.md
 ---
 
-# Security phase 1 and Secret blocks
+# Security: KMS key at rest, headers and CSP, signed-in files, two-step sign-in, alerts, Secret blocks
 
 **Asked.** The owner wants to keep confidential things, passwords included, in the app: encryption at rest with an AWS key (own key later), encryption in transit, high security, broken down layer by layer. Design: [design/security.html](../design/security.html).
 

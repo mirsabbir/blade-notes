@@ -1,3 +1,11 @@
+---
+type: reference
+date: 2026-11-12
+title: "Design records"
+tags: [docs]
+source: docs/design/README.md
+---
+
 # Design records
 
 Static design records from 11 Nov 2026, exported from a canvas tool. They are not deployed: the web build only ships `apps/web`.

@@ -3,9 +3,10 @@ type: runbook
 date: 2026-11-11
 title: "Set up calendar sign-in (Google, Microsoft, iCloud)"
 tags: [calendar, oauth, google, microsoft, icloud, ssm]
+source: docs/runbooks/calendar-setup.md
 ---
 
-# Calendar sign-in setup
+# Set up calendar sign-in (Google, Microsoft, iCloud)
 
 Until a provider's OAuth app exists, Settings › Calendars says "Not available yet" for it. Redirect URI for both: `https://<NOTES_DOMAIN>/api/calendar/callback`.
 

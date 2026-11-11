@@ -3,11 +3,14 @@ type: architecture
 date: 2026-11-11
 title: "Calendar sync: Google, Outlook, iCloud"
 tags: [calendar, google, microsoft, caldav, icloud, oauth, lambda, dynamodb-stream]
+source: docs/architecture/04-calendar-sync.md
 ---
 
-# Calendar sync
+# Calendar sync: Google, Outlook, iCloud
 
 One Lambda, `services/calendar`: the `/api/calendar` routes and a worker on the table's stream. Dates go one way, from Blade Notes to a **"Blade Notes" calendar** it creates in each connected account, so nothing else in that account is touched.
+
+**Code:** `services/calendar/src/` (`handler.ts` routes, `sync.ts` worker, `entries.ts`, `oauth.ts`, `store.ts`, `providers/`), `apps/web/src/Settings.tsx` (Calendars), `infra/lib/notes-stack.ts` (Lambda, stream, routes). Tests: `services/calendar/src/*.test.ts`.
 
 ```mermaid
 sequenceDiagram

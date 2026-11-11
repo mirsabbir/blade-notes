@@ -3,11 +3,14 @@ type: architecture
 date: 2026-11-11
 title: "Secret blocks and the vault"
 tags: [security, encryption, web-crypto, vault, secrets]
+source: docs/architecture/05-secret-blocks.md
 ---
 
-# Secret blocks
+# Secret blocks and the vault
 
 Passwords and PINs inside a note, encrypted in the browser (`apps/web/src/vault.ts`, `secret.ts`, `VaultPanel.tsx`). The server, AWS, backups, search and calendars only ever hold ciphertext.
+
+**Code:** `apps/web/src/vault.ts` (keys), `apps/web/src/secret.ts` (the node), `apps/web/src/VaultPanel.tsx` (Settings and unlock). Tests: `vault.test.ts`.
 
 ```mermaid
 flowchart LR

@@ -3,9 +3,10 @@ type: runbook
 date: 2026-11-12
 title: "Owner setup: what only the account owner can do"
 tags: [setup, security, mfa, vault, calendar, alerts]
+source: docs/runbooks/owner-setup.md
 ---
 
-# Owner setup
+# Owner setup: what only the account owner can do
 
 Steps that need the owner's phone, email or Google account, so no deploy or agent can do them. Status as of 2026-11-12.
 

@@ -4,9 +4,10 @@ date: 2026-11-11
 status: "Live. Web app, sync API, AWS stack; desktop apps released as v0.1.0 the same evening."
 title: "Blade Notes: first day, from nothing to a live app"
 tags: [history, web, sync, cdk, desktop, descriptions, attachments]
+source: docs/work-logs/2026-11-11-project-start.md
 ---
 
-# Blade Notes: first day
+# Blade Notes: first day, from nothing to a live app
 
 **Asked.** A personal notes app built around blades (each folder opens a column to the right), open source, on the owner's own AWS, because no existing app fit.
 

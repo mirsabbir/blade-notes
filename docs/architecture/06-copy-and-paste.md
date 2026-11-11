@@ -3,11 +3,14 @@ type: architecture
 date: 2026-11-11
 title: "Copy and paste: chips, secrets and the Copy button"
 tags: [editor, clipboard, copy, markdown]
+source: docs/architecture/06-copy-and-paste.md
 ---
 
-# Copy and paste
+# Copy and paste: chips, secrets and the Copy button
 
 Custom pieces in the editor (date chips, secrets) must survive leaving it.
+
+**Code:** `apps/web/src/copy.ts` (Copy button, plain-text copies), `apps/web/src/clipboard.ts`, `apps/web/src/schedule.ts` (`claim`), `apps/web/src/secret.ts`. Tests: `schedule.test.ts`.
 
 | Piece | Plain-text copy | Rich copy (HTML) | Pasted back into Blade Notes |
 |---|---|---|---|

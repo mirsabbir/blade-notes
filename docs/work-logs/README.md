@@ -1,3 +1,11 @@
+---
+type: reference
+date: 2026-11-12
+title: "Work logs"
+tags: [docs]
+source: docs/work-logs/README.md
+---
+
 # Work logs
 
 One file per topic per day: `YYYY-MM-DD-<topic>.md`. A day with three unrelated tasks has three files.

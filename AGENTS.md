@@ -12,7 +12,7 @@ Personal notes and tasks app: React + Tiptap web app, AWS serverless backend (CD
 | `services/calendar` | Lambda for `/api/calendar/*` and the stream worker that writes calendars |
 | `infra/lib/notes-stack.ts` | The whole AWS stack |
 | `apps/desktop-*` | macOS (Swift) and Windows (.NET) windows around the site |
-| `docs/` | Architecture, runbooks, decisions, work logs, design records: start at `docs/README.md` |
+| `docs/` | Architecture, runbooks, decisions, work logs, glossary, design records: start at `docs/README.md` |
 
 ## Commands
 
@@ -28,7 +28,7 @@ AWS_PROFILE=<profile> pnpm deploy   # see docs/runbooks/deploy.md
 ## Rules
 
 - **Public repo:** never commit account ids, user-pool ids, emails, tokens, secrets or `.env`. Deployment values live in `.env` (git-ignored).
-- **Docs are part of done:** a change in behaviour updates its `docs/architecture/` file; a shaping choice gets a `docs/decisions/` record; each day's work gets a `docs/work-logs/` entry (one topic per file). Keep docs short; tables and mermaid over prose.
+- **Docs are part of done**, for people and agents alike ([docs/CONTRIBUTING.md](docs/CONTRIBUTING.md)): a change in behaviour updates its `docs/architecture/` page; a shaping choice gets a `docs/decisions/` record; each day's work gets a `docs/work-logs/` entry, one topic per file; reusable facts leave the log the same day; new terms go in `docs/glossary.md`; every page has frontmatter and a row in `docs/README.md`. Templates: `docs/templates/`.
 - **Less code:** simple, no abstraction without a second use, no dead code, comments say why.
 - **Dates:** timed values are moments shown in the device's current zone; all-day values are days (`packages/core/src/when.ts`). Never format a date without going through it.
 - **Security:** the CSP allows scripts only from the site; no inline scripts, no new third-party origins without updating the CSP in `notes-stack.ts`. Secret-block plaintext never leaves the browser, never logs, never syncs.

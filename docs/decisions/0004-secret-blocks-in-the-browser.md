@@ -1,8 +1,10 @@
 ---
 type: decision
 date: 2026-11-11
-status: accepted
-title: "Secret blocks are encrypted in the browser"
+status: "accepted"
+title: "0004 · Secret blocks are encrypted in the browser"
+tags: [docs]
+source: docs/decisions/0004-secret-blocks-in-the-browser.md
 ---
 
 # 0004 · Secret blocks are encrypted in the browser

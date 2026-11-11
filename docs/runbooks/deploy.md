@@ -3,9 +3,10 @@ type: runbook
 date: 2026-11-11
 title: "Deploy and check"
 tags: [deploy, cdk, aws]
+source: docs/runbooks/deploy.md
 ---
 
-# Deploy
+# Deploy and check
 
 ```bash
 pnpm install
@@ -23,4 +24,4 @@ Settings come from `.env` (git-ignored; see `.env.example`). Never deploy from a
 3. `GET /api/files/...` without a token answers 401.
 4. With `NOTES_ALERT_EMAIL` set for the first time: confirm the "AWS Notification - Subscription Confirmation" email, or no alert arrives. All owner steps: [owner-setup.md](owner-setup.md).
 
-The desktop apps load the live site, so they need no release for web changes.
+The desktop apps load the live site, so they need no release for web changes; for changes to the apps themselves: [release.md](release.md).

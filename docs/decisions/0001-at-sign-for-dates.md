@@ -1,8 +1,10 @@
 ---
 type: decision
 date: 2026-11-11
-status: accepted
-title: "@ at the start of a word opens the date picker"
+status: "accepted"
+title: "0001 · `@` at the start of a word opens the date picker"
+tags: [docs]
+source: docs/decisions/0001-at-sign-for-dates.md
 ---
 
 # 0001 · `@` at the start of a word opens the date picker

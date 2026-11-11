@@ -3,11 +3,14 @@ type: architecture
 date: 2026-11-11
 title: "Security: at rest, in transit, sign-in and Secret blocks"
 tags: [security, kms, encryption, tls, csp, mfa, cognito]
+source: docs/architecture/02-security.md
 ---
 
-# Security
+# Security: at rest, in transit, sign-in and Secret blocks
 
 Two layers. The server layer (phase 1) protects stored data and traffic with an AWS KMS key; the app's own server can still read notes, because it has to sync them. Secret blocks (phase 2, [05](05-secret-blocks.md)) are encrypted in the browser with a key that never leaves the device, so not even someone inside the AWS account can read them.
+
+**Code:** `infra/lib/notes-stack.ts` (KMS key, headers, trail, alerts), `services/api/src/handler.ts` (`file()`), `apps/web/src/auth.ts` (revoke, Cognito calls), `apps/web/src/SecuritySettings.tsx`, `apps/web/src/Editor.tsx` (`SignedImage`).
 
 ```mermaid
 flowchart LR

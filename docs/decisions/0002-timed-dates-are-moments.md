@@ -1,8 +1,10 @@
 ---
 type: decision
 date: 2026-11-11
-status: accepted
-title: "A timed date is a moment; an all-day date is a day"
+status: "accepted"
+title: "0002 · A timed date is a moment; an all-day date is a day"
+tags: [docs]
+source: docs/decisions/0002-timed-dates-are-moments.md
 ---
 
 # 0002 · A timed date is a moment; an all-day date is a day

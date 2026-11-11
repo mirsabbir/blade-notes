@@ -3,9 +3,14 @@ type: architecture
 date: 2026-11-11
 title: "Dates typed with @, events and the Agenda"
 tags: [dates, events, agenda, time-zones, editor, tiptap]
+source: docs/architecture/03-dates-and-agenda.md
 ---
 
-# Dates, events and the Agenda
+# Dates typed with @, events and the Agenda
+
+Type `@` and a day while writing, and that line gets a date: a chip in the text, an event the Agenda lists, and (with a calendar connected) an entry in your calendar. Times follow you across time zones.
+
+**Code:** `packages/core/src/when.ts` (zones), `apps/web/src/dates.ts` (parser, labels), `apps/web/src/schedule.ts` (chip, @ trigger, paste rule), `apps/web/src/DatePicker.tsx`, `apps/web/src/Agenda.tsx`, `apps/web/src/store.ts` (`createEvent`, `reconcileEvents`, `checkClock`). Tests: `when.test.ts`, `dates.test.ts`, `schedule.test.ts`.
 
 ## The gesture
 

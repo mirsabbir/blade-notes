@@ -3,9 +3,14 @@ type: architecture
 date: 2026-11-11
 title: "Data model, storage and sync"
 tags: [data-model, dynamodb, sync, sign-in, hosting]
+source: docs/architecture/01-data-and-sync.md
 ---
 
 # Data model, storage and sync
+
+Everything you write lives first on your device (IndexedDB) and works offline; a small API copies it to one DynamoDB table and back, so every device ends up with the same library. This page covers what is stored, how devices stay in step, what closing the app can lose, sign-in and hosting.
+
+**Code:** `packages/core/src/types.ts` (data model), `services/api/src/handler.ts` (sync API), `apps/web/src/store.ts` (device store, sync, closing), `apps/web/src/auth.ts` (sign-in), `infra/lib/notes-stack.ts`. Tests: `services/api/src/stored.test.ts`, `apps/web/src/store.test.ts`, `apps/web/src/close.test.ts`.
 
 ## Data model
 

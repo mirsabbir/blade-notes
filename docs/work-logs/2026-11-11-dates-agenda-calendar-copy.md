@@ -4,9 +4,10 @@ date: 2026-11-11
 status: "Live and checked in the app. Google/Outlook sync waits for their OAuth apps (owner, runbook); iCloud can be connected now."
 title: "Dates while writing (@), Agenda, calendar sync, time zones, Copy"
 tags: [dates, agenda, calendar, time-zones, copy, editor]
+source: docs/work-logs/2026-11-11-dates-agenda-calendar-copy.md
 ---
 
-# Dates while writing, Agenda, calendar sync, Copy
+# Dates while writing (@), Agenda, calendar sync, time zones, Copy
 
 **Asked.** While writing a task's description, put a date on any line on the fly (an easy gesture, not breaking emails); see what to do when, grouped by space, and jump to the line; sync to the calendar as events; copying text with dates must not break; a Copy button on tasks. Later the same day: the owner travels, so a time set in Dhaka must show 30 minutes earlier when the app opens in India, and redraw after the next sync without a reload.
 

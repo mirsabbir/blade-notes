@@ -1,8 +1,10 @@
 ---
 type: decision
 date: 2026-11-11
-status: accepted
-title: "One AWS-made KMS key now; own key material later"
+status: "accepted"
+title: "0003 · One AWS-made KMS key now; own key material later"
+tags: [docs]
+source: docs/decisions/0003-kms-key-now-own-key-later.md
 ---
 
 # 0003 · One AWS-made KMS key now; own key material later
