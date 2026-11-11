@@ -5,7 +5,7 @@ vi.mock('idb-keyval', () => ({ get: async () => undefined, set: async () => {} }
 vi.stubGlobal('fetch', async () => new Response('{}', { status: 401 }))
 
 const { chipsIn, create, createEvent, currentState, reconcileEvents } = await import('./store')
-const { toMarkdown } = await import('./copy')
+const { contentToText, toMarkdown } = await import('./copy')
 
 const p = (...content: object[]) => ({ type: 'paragraph', content })
 const t = (text: string) => ({ type: 'text', text })
@@ -65,5 +65,17 @@ describe('the Copy button', () => {
     expect(md).toContain('- Book the appointment Sun 15 Nov 2026, 10:00')
     expect(md).toContain('- PIN ••••••')
     expect(md).not.toContain('v1:abc')
+  })
+})
+
+describe('plain-text copy of a selection', () => {
+  it('is Markdown without stacks of blank lines', () => {
+    process.env.TZ = 'Asia/Dhaka'
+    const content = [
+      p(t('Intro')),
+      { type: 'image', attrs: { src: '/api/files/a/b.png', alt: 'scan.png' } },
+      { type: 'bulletList', content: [{ type: 'listItem', content: [p(t('One '), chip('x', '2026-11-15'))] }, { type: 'listItem', content: [p(t('Two'))] }] },
+    ]
+    expect(contentToText(content as never)).toBe('Intro\n\n[image: scan.png]\n\n- One Sun 15 Nov 2026\n- Two')
   })
 })

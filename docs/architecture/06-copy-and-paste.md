@@ -16,6 +16,12 @@ Custom pieces in the editor (date chips, secrets) must survive leaving it.
 
 Paste rule in `schedule.ts` (`claim`): deleting one pasted copy never deletes another; a cross-note cut becomes a new event (the old one is trashed when its note saves).
 
+Plain-text copies of a selection (⌘C) go through the editor's `clipboardTextSerializer`, which writes the same Markdown as the Copy button (`contentToText` in `copy.ts`): lists as `- `, one blank line between blocks. Tiptap's default put several blank lines between list items.
+
+## Clipboard access
+
+`clipboard.ts` writes through the `copy` event first (`document.execCommand('copy')` with our own data), which needs no permission, then falls back to the Clipboard API. Embedded web views often deny `clipboard-write` (the QA browser did), and the desktop apps are web views. Both paths need a recent click.
+
 ## Copy button
 
 Top right of an open note or task (`copy.ts`). One click puts two formats on the clipboard:

@@ -18,6 +18,7 @@ import { DateChip, dateQueryKey, startSchedule, type DateQuery, type ScheduleHoo
 import { ChipPopover, DatePicker } from './DatePicker'
 import { Secret, makeSecret } from './secret'
 import { requestUnlock } from './VaultPanel'
+import { contentToText } from './copy'
 
 /** Images in notes are private files: shown from a blob fetched with sign-in, never a public link. */
 const SignedImage = Image.extend({
@@ -99,6 +100,8 @@ export function Editor({ id, doc, placeholder, describe, flash, flashKey, onOpen
     content: (doc as object) ?? '',
     editorProps: {
       attributes: { class: 'doc', 'aria-label': 'Note text' },
+      // Plain-text copies read like the Copy button: lists as "- ", dates in words, secrets as dots.
+      clipboardTextSerializer: (slice) => contentToText(slice.content.toJSON() as Parameters<typeof contentToText>[0]),
       handlePaste: (_view, event) => {
         const file = [...(event.clipboardData?.files ?? [])].find((f) => f.type.startsWith('image/'))
         if (!file) return false
@@ -299,7 +302,6 @@ function Toolbar({ editor, hooks }: { editor: TiptapEditor; hooks: DescribeHooks
       {btn('Image', false, () => file.current?.click(), ImagePlus)}
       {btn('Description for the selection or list item (⌘⇧D)', false, () => describeSelection(editor, hooks), NotebookText)}
       {btn('Schedule: give this line a date (or type @)', false, () => startSchedule(editor), CalendarPlus)}
-      {btn('Secret: hide the selected text behind your vault passphrase', false, () => void makeSecret(editor), Lock)}
       <input
         ref={file}
         type="file"

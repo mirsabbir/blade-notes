@@ -20,12 +20,13 @@ const pad = (n: number) => String(n).padStart(2, '0')
 
 /** Splits a trailing time off: "sun 3pm" → ["sun", "15:00"]. Needs am/pm, a colon or "at". */
 function takeTime(q: string): [string, string | null] {
-  const m = /(?:^|\s)(?:at\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/.exec(q) ?? /(?:^|\s)(?:at\s*)?(\d{1,2}):(\d{2})$/.exec(q) ?? /(?:^|\s)at\s+(\d{1,2})()$/.exec(q)
+  const m = /(?:^|\s)(?:at\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm|a|p)$/.exec(q) ?? /(?:^|\s)(?:at\s*)?(\d{1,2}):(\d{2})$/.exec(q) ?? /(?:^|\s)at\s+(\d{1,2})()$/.exec(q)
   if (!m) return [q, null]
   let h = Number(m[1])
   const min = Number(m[2] || 0)
-  if (m[3] === 'pm' && h < 12) h += 12
-  if (m[3] === 'am' && h === 12) h = 0
+  const half = m[3]?.charAt(0) // "3p" while on the way to "3pm" already counts
+  if (half === 'p' && h < 12) h += 12
+  if (half === 'a' && h === 12) h = 0
   if (h > 23 || min > 59) return [q, null]
   return [q.slice(0, m.index).trim(), `${pad(h)}:${pad(min)}`]
 }

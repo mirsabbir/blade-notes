@@ -2,6 +2,7 @@ import { Node, mergeAttributes, type Editor, type NodeViewRendererProps } from '
 import type { Node as PMNode } from '@tiptap/pm/model'
 import type { NodeView } from '@tiptap/pm/view'
 import { decryptText, encryptText, hasVault, isUnlocked, onVaultChange } from './vault'
+import { copyToClipboard } from './clipboard'
 
 /**
  * Secret blocks: a password or PIN inside a note, stored as vault ciphertext (vault.ts).
@@ -154,13 +155,13 @@ class SecretView implements NodeView {
     const text = await this.open()
     if (text === null) return
     try {
-      await navigator.clipboard.writeText(text)
+      await copyToClipboard(text)
       const copiedAt = Date.now()
       lastCopy = copiedAt
       setTimeout(() => lastCopy === copiedAt && void navigator.clipboard.writeText('').catch(() => {}), SHOW_MS)
       this.flash('Copied · clears in 30 s')
     } catch {
-      this.flash('Could not copy')
+      this.flash('Could not copy: press Copy again')
     }
   }
 

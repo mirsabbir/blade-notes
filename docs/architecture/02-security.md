@@ -25,7 +25,7 @@ flowchart LR
 | What | Encryption |
 |---|---|
 | Notes table (items, bodies, settings, calendar records) | KMS key `alias/blade-notes` (customer managed, yearly rotation) |
-| Files bucket | SSE-KMS with the same key, S3 bucket key on |
+| Files bucket | SSE-KMS with the same key, S3 bucket key on; files from before the switch were copied onto the key in place on 2026-11-11 (their older versions stay in version history under the S3 key) |
 | API and calendar logs | Same key; no note text is ever logged |
 | Backups (35-day point in time, S3 versions) | Follow the table's and bucket's key |
 | Calendar refresh tokens, iCloud app password | Sealed with KMS `Encrypt`, encryption context `{sub, provider}` |

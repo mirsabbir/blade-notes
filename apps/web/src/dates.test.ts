@@ -20,6 +20,8 @@ describe('what you type after @', () => {
     expect(days('in 3 days')[0]).toEqual(['2026-11-14', null])
     expect(days('in 2w')[0]).toEqual(['2026-11-25', null])
     expect(days('3pm')).toEqual([['2026-11-11', '15:00']])
+    expect(days('sun 3p')[0]).toEqual(['2026-11-15', '15:00'])
+    expect(days('tom 12a')[0]).toEqual(['2026-11-12', '00:00'])
     expect(days('sun at 18:30')[0]).toEqual(['2026-11-15', '18:30'])
     expect(days('5')[0]).toEqual(['2026-12-05', null]) // the 5th has passed this month
     expect(days('1 jan')[0]).toEqual(['2027-01-01', null])

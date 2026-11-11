@@ -172,7 +172,7 @@ export function ChipPopover({ editor, id, anchor, onClose }: { editor: TiptapEdi
   const done = item.status === 'done'
 
   return (
-    <Floating rect={anchor.getBoundingClientRect()} width={560} label="Date" boxRef={box}>
+    <Floating rect={anchor.getBoundingClientRect()} width={620} label="Date" boxRef={box}>
       <div className="picker">
         <div className="picker-list chip-form">
           <div className="picker-head">

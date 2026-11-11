@@ -10,7 +10,7 @@ import { AgendaBlade, dueNow, entriesOf, type Entry } from './Agenda'
 import { copyItem } from './copy'
 import { VaultHost } from './VaultPanel'
 import { Attachments, DropZone } from './Attachments'
-import { childrenOf, clearFresh, create, createDescription, docText, freshId, ownerOf, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
+import { childrenOf, clearFresh, create, createDescription, currentState, docText, freshId, ownerOf, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
 import { Description, TooLarge, type OpenDescription } from './Description'
 import type { DescribeHooks } from './describe'
 
@@ -95,8 +95,9 @@ export function App() {
   }
   /** Opens `id` with every folder above it, as search does. */
   const reveal = (id: string) => {
+    const all = currentState().items // the item may have been created a moment ago, after this render
     const trail: string[] = []
-    for (let cur: Item | undefined = items[id]; cur; cur = cur.parentId ? items[cur.parentId] : undefined) trail.unshift(cur.id)
+    for (let cur: Item | undefined = all[id]; cur; cur = cur.parentId ? all[cur.parentId] : undefined) trail.unshift(cur.id)
     setPath(trail)
     setManual({})
     setFocus(false)
@@ -140,7 +141,7 @@ export function App() {
 
   return (
     <div className="shell">
-      {chain.map((node, i) =>
+      {chain.map((node, i) => [
         folded(i) ? (
           <Strip
             key={node?.id ?? 'root'}
@@ -175,10 +176,11 @@ export function App() {
             onFold={() => setManual((m) => ({ ...m, [i]: true }))}
           />
         ),
-      )}
-      {agenda && !focus && (
-        <AgendaBlade group={agendaGroup} onGroup={setAgendaGroup} onOpen={openEntry} onFold={() => setAgenda(false)} activeId={selected?.id} />
-      )}
+        // The Agenda opens from the Library, so it sits right after it.
+        i === 0 && agenda && !focus && (
+          <AgendaBlade key="agenda" group={agendaGroup} onGroup={setAgendaGroup} onOpen={openEntry} onFold={() => setAgenda(false)} activeId={selected?.id} />
+        ),
+      ])}
       <EditorPane
         flash={flash}
         chain={chain}
@@ -616,7 +618,7 @@ function EditorPane(props: {
         {selected && (
           <button type="button" className="btn" onClick={() => void copy()} title="Copy everything: text, dates, descriptions, as rich text and Markdown">
             {copied === 'yes' ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
-            {copied === 'yes' ? 'Copied' : copied === 'failed' ? 'Copy blocked' : 'Copy'}
+            {copied === 'yes' ? 'Copied' : copied === 'failed' ? 'Could not copy' : 'Copy'}
           </button>
         )}
         <button type="button" className={props.focus ? 'btn on' : 'btn'} aria-pressed={props.focus} onClick={props.onFocus} title="Fold every blade">

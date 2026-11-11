@@ -186,10 +186,12 @@ function useCalendarStatus() {
 
 const when = (iso?: string) => (iso ? new Date(iso).toLocaleString(undefined, { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' }) : '')
 
+const OWNER = { google: 'Google', outlook: 'Microsoft', apple: 'Apple' } as const
+
 function statusLine(st: CalendarStatus | undefined, loading: boolean): string {
   if (!st) return loading ? 'Checking…' : 'Status unknown'
   if (st.connected) return `Connected${st.account ? ` as ${st.account}` : ''}${st.lastSyncAt ? ` · updated ${when(st.lastSyncAt)}` : ''}`
-  if (!st.configured) return 'Not available yet: the sign-in app is not registered'
+  if (!st.configured) return `Not available yet: Blade Notes is not registered with ${OWNER[st.provider]}`
   return 'Not connected'
 }
 

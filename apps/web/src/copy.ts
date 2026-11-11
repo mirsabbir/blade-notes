@@ -11,6 +11,7 @@ import { DescribeMark, Describe } from './describe'
 import { DateChip } from './schedule'
 import { Secret } from './secret'
 import { currentState, docText } from './store'
+import { copyToClipboard } from './clipboard'
 
 /**
  * The Copy button: a whole note or task as rich text (for Gmail, Docs, Slack) and as Markdown
@@ -104,6 +105,9 @@ function block(n: N, pad: string, out: string[]): void {
     case 'horizontalRule':
       out.push(`${pad}---`)
       return
+    case 'image':
+      out.push(pad + inline([n]))
+      return
     case 'table':
       kids.forEach((row, r) => {
         out.push(`${pad}| ${(row.content ?? []).map((c) => (c.content ?? []).map((p) => inline(p.content)).join(' ')).join(' | ')} |`)
@@ -124,6 +128,16 @@ function listItem(li: N, marker: string, pad: string, out: string[]) {
   if (first?.type === 'paragraph') out.push(...phraseNotes(first.content, inner))
   else if (first) block(first, inner, out)
   rest.forEach((k) => block(k, inner, out))
+}
+
+/** Plain text of copied editor content (a slice's JSON): Markdown, dates in words, secrets as dots. */
+export function contentToText(content: N[] = []): string {
+  const out: string[] = []
+  content.forEach((n) => {
+    block(n, '', out)
+    out.push('')
+  })
+  return out.join('\n').replace(/\n{3,}/g, '\n\n').trim()
 }
 
 export function toMarkdown(item: Item, doc: unknown): string {
@@ -151,14 +165,8 @@ export function toHtml(item: Item, doc: unknown): string {
   ].join('')
 }
 
-/** Puts both versions on the clipboard; falls back to Markdown alone where rich copy is not allowed. */
-export async function copyItem(item: Item): Promise<void> {
+/** Puts both versions on the clipboard; the app you paste into takes the one it understands. */
+export function copyItem(item: Item): Promise<void> {
   const doc = currentState().bodies[item.id]?.doc
-  const md = toMarkdown(item, doc)
-  try {
-    const blob = (text: string, type: string) => new Blob([text], { type })
-    await navigator.clipboard.write([new ClipboardItem({ 'text/html': blob(toHtml(item, doc), 'text/html'), 'text/plain': blob(md, 'text/plain') })])
-  } catch {
-    await navigator.clipboard.writeText(md)
-  }
+  return copyToClipboard(toMarkdown(item, doc), toHtml(item, doc))
 }

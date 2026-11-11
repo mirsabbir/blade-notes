@@ -1,6 +1,7 @@
 import { useEffect, useState, type FormEvent } from 'react'
 import { Check, Copy, Lock, LockOpen, X } from 'lucide-react'
 import { updateSettings } from './store'
+import { copyToClipboard } from './clipboard'
 import { createVault, hasVault, isUnlocked, lock, resetPassphrase, unlock, useVault } from './vault'
 import './secret.css'
 
@@ -114,7 +115,7 @@ function RecoveryKey({ code, onDone }: { code: string; onDone: () => void }) {
         <button
           type="button"
           className="btn"
-          onClick={() => void navigator.clipboard.writeText(code).then(() => setCopied(true), () => setCopied(false))}
+          onClick={() => void copyToClipboard(code).then(() => setCopied(true), () => setCopied(false))}
         >
           {copied ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />} {copied ? 'Copied' : 'Copy the key'}
         </button>

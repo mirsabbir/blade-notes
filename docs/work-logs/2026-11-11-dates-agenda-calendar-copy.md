@@ -1,7 +1,7 @@
 ---
 type: work-log
 date: 2026-11-11
-status: "Deployed (53c69bb). In-app QA waits for a sign-in in the test browser. Google/Outlook need their OAuth apps registered (owner); iCloud works with an app-specific password."
+status: "Live and checked in the app. Google/Outlook sync waits for their OAuth apps (owner, runbook); iCloud can be connected now."
 title: "Dates while writing (@), Agenda, calendar sync, time zones, Copy"
 tags: [dates, agenda, calendar, time-zones, copy, editor]
 ---
@@ -29,12 +29,36 @@ Design canvas (5 boards) → [design/](../design/).
 - `services/calendar`: routes + stream worker, Google/Graph/CalDAV adapters.
 - Tests: core 20, web 14, calendar 32, api 14 (all green). Zone tests switch `TZ` between Dhaka, Kolkata, New York, Honolulu and Berlin (DST).
 
-## Checked
+## Checked (live, signed in, throwaway "QA test" space, trashed afterwards)
 
-- Deployed with no replaced resources (`cdk diff`); `/api/calendar` answers 401 without a token; an unknown OAuth state redirects to `?calendar-error=…`.
+| Check | Result |
+|---|---|
+| `@sun 3pm` + Enter | picker "Sunday, 15 Nov · This Sunday · 15:00"; chip "Sun 15 Nov · 15:00"; event stored `…T15:00:00+06:00`, `tz` Asia/Dhaka |
+| `@tom` | all-day chip "Tomorrow" |
+| `mir@gmail.com` | no picker |
+| `@team` + Esc | stays text, picker closed |
+| Chip popup | time 09:30 and +1 day reach chip and item; done/undone; private toggle; Esc closes |
+| Agenda | by space and by day; row opens the task and the chip flashes; ticking done strikes the chip |
+| `/t/<task>#<event>` | opens the task, URL cleaned, chip flashes ~0.6 s after load |
+| ⌘C of a line with a chip | plain text has "Mon 16 Nov 2026, 09:30", HTML has `<time data-event>`; pasting back makes a new event id on the same date |
+| Copy button | Markdown + HTML on the clipboard, dates written out, secret as dots |
+| Calendar worker | 10 invocations during QA, no errors; nothing written (no calendar connected) |
+| `/api/calendar` | Google and Outlook "not registered yet", Apple ready |
+
+Found and fixed during QA:
+
+- **New space did not open** (old bug): opening read the item list from before the space existed. Now reads the latest state.
+- **Agenda opened after the folder column**: now right after the Library, where its button is.
+- **Copy button failed in web views that deny the clipboard API**: copies through the copy event first (`clipboard.ts`); also used by secrets and the recovery key.
+- **Plain-text copies had stacks of blank lines** (Tiptap default): now the same Markdown as the Copy button.
+- **`@sun 3p` hid the picker until the `m`**: `3p` / `9a` count.
+- Calendar status said "the sign-in app is not registered": now "Blade Notes is not registered with Google".
+- Chip popup widened so its buttons stay on one line; the Secret button left the toolbar (it needs selected text; it stays on the selection bubble).
+- Images were missing from copied Markdown.
+
+Not testable here: switching the device's time zone (unit tests cover Dhaka → Kolkata → New York → Honolulu → Berlin DST); connecting a real calendar.
 
 ## Open
 
-- In-app QA of chips, picker, Agenda, Copy, deep link (needs a sign-in in the QA browser).
 - Owner: register the Google (and, if wanted, Microsoft) OAuth app — [calendar-setup.md](../runbooks/calendar-setup.md); or connect iCloud from Settings.
 - Two-way sync (moving an event in the calendar moves it here) is not built.
