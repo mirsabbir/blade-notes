@@ -29,17 +29,20 @@ function Root() {
     })()
   }, [])
 
-  // Keep devices in step: every 30 s, when the tab comes back, and when the network returns.
+  // Keep devices in step: every 10 s while visible, and at once when the window gets
+  // focus (switching from the desktop app to a visible browser tab fires no visibilitychange),
+  // when the tab comes back and when the network returns.
   useEffect(() => {
     if (phase !== 'ready') return
     const tick = () => document.visibilityState === 'visible' && void sync()
-    const id = setInterval(tick, 30_000)
+    const id = setInterval(tick, 10_000)
+    const events = ['focus', 'online'] as const
+    events.forEach((e) => window.addEventListener(e, tick))
     document.addEventListener('visibilitychange', tick)
-    window.addEventListener('online', tick)
     return () => {
       clearInterval(id)
+      events.forEach((e) => window.removeEventListener(e, tick))
       document.removeEventListener('visibilitychange', tick)
-      window.removeEventListener('online', tick)
     }
   }, [phase])
 
