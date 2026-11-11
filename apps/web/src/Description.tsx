@@ -57,7 +57,8 @@ export function Description({ stack, onChange }: { stack: OpenDescription[]; onC
     create: (title) => createDescription(owner?.id ?? item.id, title),
   }
   // Where this description sits: the note, then each description opened on the way here.
-  const path = [owner?.title, ...stack.slice(0, -1).map((e) => state.items[e.id]?.title)].filter(Boolean).join(' › ') || 'Description'
+  // "In “Pending Tasks” › level one": says outright that this is a description inside that note.
+  const path = [owner ? `In “${owner.title}”` : 'Description', ...stack.slice(0, -1).map((e) => state.items[e.id]?.title)].filter(Boolean).join(' › ')
   const remove = () => {
     if (!confirm(`Remove the description “${item.title}”? The text it belongs to stays.`)) return
     top.remove()
