@@ -1,0 +1,134 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Security breakdown</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+.sec code{font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;padding:1px 6px;border-radius:6px;background:#eef2f9;color:#14295f}
+.sec table{width:100%;border-collapse:collapse;font-size:13.5px;line-height:1.5}
+.sec th{text-align:left;font-size:12px;font-weight:600;color:#555e6f;padding:0 16px 10px 0;border-bottom:1px solid #dee1e8}
+.sec td{padding:12px 16px 12px 0;border-bottom:1px solid #eef0f4;vertical-align:top}
+.sec td.layer{font-weight:600}
+.sec td.layer small{display:block;font-weight:400;color:#555e6f}
+.st{display:inline-flex;align-items:center;height:22px;padding:0 8px;border-radius:999px;font-size:12px;font-weight:600;white-space:nowrap}
+.gap{background:#fdf0e3;color:#8f4c08}
+.okc{background:#e3f4ea;color:#0f6b3d}
+.new{background:#e1ebff;color:#14295f}
+.p2{background:#efeafe;color:#4a2fc0}
+.mx th{text-align:center}
+.mx th:first-child{text-align:left}
+.mx td{text-align:center;vertical-align:middle}
+.mx td:first-child{text-align:left}
+.yes{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:#0f6b3d}
+.half{display:inline-flex;align-items:center;gap:4px;font-weight:600;color:#8f4c08}
+.no{color:#6b7385}
+.sec ol,.sec ul{margin:0;padding-left:20px;display:flex;flex-direction:column;gap:8px;font-size:14px;line-height:1.5;color:#2b3242}
+</style>
+<style>
+body{margin:0;background:#f3f5f9}
+main{display:flex;justify-content:center;padding:32px 16px;overflow-x:auto}
+main>*{flex:none;box-shadow:0 1px 3px rgba(13,17,27,.08)}
+</style>
+</head>
+<body>
+<main>
+<div class="sec" style="width: 1440px; height: 1900px; box-sizing: border-box; padding: 48px 56px; display: flex; flex-direction: column; gap: 36px; background: #ffffff; color: #0d111b; font-family: 'Geist', system-ui, sans-serif">
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h1 style="margin: 0; font-size: 30px; font-weight: 650; letter-spacing: -0.01em">Security breakdown</h1>
+    <p style="margin: 0; max-width: 1000px; font-size: 15px; line-height: 1.55; color: #3d4556">Checked against the deployed BladeNotes stack on 11 Nov 2026. <b>Phase 1</b> is what you asked for: encryption at rest with an AWS KMS key, encryption in transit, and the gaps around them. <b>Phase 2</b> is your own key, for passwords.</p>
+    <div style="display: flex; gap: 12px; max-width: 1100px; padding: 14px 16px; border-radius: 12px; background: #fdf0e3; color: #5c3305; font-size: 14px; line-height: 1.5">
+      <svg style="flex: none; margin-top: 2px" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m21.73 18-8-14a2 2 0 0 0-3.48 0l-8 14A2 2 0 0 0 4 21h16a2 2 0 0 0 1.73-3"></path><path d="M12 9v4M12 17h.01"></path></svg>
+      <span><b>Read this before storing passwords.</b> A KMS key protects the stored data, but the app’s own server must be able to read your notes, so anyone who gets into your AWS account can read them too. Phase 1 makes that hard and logged. Only phase 2’s Secret blocks make it impossible: they open with a passphrase that never leaves your device.</span>
+    </div>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 18px; font-weight: 600">Layer by layer: today and phase 1</h2>
+    <table>
+      <thead><tr><th style="width: 210px">Layer</th><th style="width: 430px">Today (deployed)</th><th>Phase 1</th><th style="width: 90px">Status</th></tr></thead>
+      <tbody>
+        <tr><td class="layer">At rest<small>notes database (DynamoDB)</small></td><td>Encrypted with an AWS-owned key: you cannot see it, audit it or switch it off.</td><td>Your own KMS key <code>alias/blade-notes</code> (AWS makes the key material, rotates it yearly). Every use is logged in CloudTrail; disabling the key locks the data at once. Switched in place, no downtime.</td><td><span class="st gap">Gap</span></td></tr>
+        <tr><td class="layer">At rest<small>files (S3)</small></td><td>Amazon’s S3 key (SSE-S3).</td><td>Same KMS key with an S3 bucket key (keeps KMS calls cheap). Files already there are re-encrypted once by copying them in place.</td><td><span class="st gap">Gap</span></td></tr>
+        <tr><td class="layer">At rest<small>backups and logs</small></td><td>35-day point-in-time backups and S3 versions; API logs on CloudWatch’s default key.</td><td>Backups follow the table’s key. The log group uses the KMS key, and the API never writes note text to a log.</td><td><span class="st gap">Gap</span></td></tr>
+        <tr><td class="layer">In transit<small>your device to the site</small></td><td>HTTPS only (TLS 1.2 or 1.3); plain HTTP is redirected.</td><td>Add HSTS for two years, so a browser never even tries plain HTTP once it has seen the site.</td><td><span class="st gap">Small gap</span></td></tr>
+        <tr><td class="layer">In transit<small>inside AWS</small></td><td>CloudFront to the API over HTTPS only; Lambda to DynamoDB, S3 and KMS over TLS; S3 refuses plain HTTP.</td><td>Already right; kept as is.</td><td><span class="st okc">OK</span></td></tr>
+        <tr><td class="layer">File links</td><td>No sign-in on file links: anyone holding a link can open the file for about an hour, and the browser may cache it.</td><td>Sign-in required. The app asks with your token, gets a 60-second link, and shows the file from memory. Nothing is cached.</td><td><span class="st gap">Gap</span></td></tr>
+        <tr><td class="layer">Sign-in</td><td>Password of 12+ characters, MFA optional, 30-day refresh token. Signing out does not revoke that token.</td><td>MFA on with an authenticator app. Sign-out revokes the token; “Sign out everywhere” in Settings.</td><td><span class="st gap">Gap</span></td></tr>
+        <tr><td class="layer">Browser hardening</td><td>No security headers.</td><td>Strict Content Security Policy (scripts only from this site, no inline scripts, no framing), no referrer, nosniff, Permissions-Policy. The main guard against a bad script reading your notes in the page.</td><td><span class="st gap">Gap</span></td></tr>
+        <tr><td class="layer">Calendar sign-in<small>new with scheduling</small></td><td>Not built yet.</td><td>Google and Microsoft tokens encrypted with the KMS key; only the calendar worker can decrypt them; events-only access.</td><td><span class="st new">New</span></td></tr>
+        <tr><td class="layer">Alerts</td><td>None.</td><td>Email when the key is disabled or its policy changes, when the AWS root user signs in, and when the bill jumps. Uses CloudTrail’s free management events.</td><td><span class="st gap">Gap</span></td></tr>
+        <tr><td class="layer">On your devices</td><td>The library is cached in the browser (IndexedDB) and sign-in tokens sit in browser storage, as in any web app.</td><td>Unchanged in phase 1; your disk encryption (FileVault, BitLocker) covers it. Secret blocks are never stored readable.</td><td><span class="st p2">Phase 2</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <div style="display: flex; flex-direction: column; gap: 12px">
+    <h2 style="margin: 0; font-size: 18px; font-weight: 600">What each layer actually stops</h2>
+    <table class="mx">
+      <thead><tr><th style="width: 360px">If this happens…</th><th>KMS at rest</th><th>HTTPS + HSTS</th><th>File sign-in</th><th>CSP headers</th><th>MFA</th><th>Secret blocks (phase 2)</th></tr></thead>
+      <tbody>
+        <tr><td>A disk or backup leaves an AWS data centre</td><td><span class="yes">Stops</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td></tr>
+        <tr><td>Someone reads your café Wi-Fi traffic</td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td></tr>
+        <tr><td>A file link leaks (history, screenshot, forward)</td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td></tr>
+        <tr><td>A bad script runs in the page</td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="half">Helps</span></td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td></tr>
+        <tr><td>Your password leaks</td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td><td><span class="yes">Stops</span></td></tr>
+        <tr><td>Someone gets into your AWS account</td><td><span class="half">Logs it</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td></tr>
+        <tr><td>Your laptop is taken while unlocked</td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="no">—</span></td><td><span class="yes">Stops</span></td></tr>
+      </tbody>
+    </table>
+    <p style="margin: 0; font-size: 12.5px; color: #555e6f">The first row is already stopped today by AWS’s own key. What the KMS key adds is the record of every use and the off switch that is yours.</p>
+  </div>
+
+  <div style="display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 48px">
+    <div style="display: flex; flex-direction: column; gap: 14px">
+      <h2 style="margin: 0; font-size: 18px; font-weight: 600">Phase 2 · Secret blocks: your own key</h2>
+      <div style="display: flex; align-items: center; gap: 10px; padding: 12px 14px; border: 1px solid #c9bdfb; border-radius: 10px; background: #f7f5ff">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="#4a2fc0" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="11" x="3" y="11" rx="2"></rect><path d="M7 11V7a5 5 0 0 1 10 0v4"></path></svg>
+        <span style="font-weight: 500">Bank login</span>
+        <span style="font-family: 'Geist Mono', ui-monospace, monospace; letter-spacing: 2px; color: #555e6f">••••••••••••</span>
+        <span style="flex: 1"></span>
+        <span style="height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid #dee1e8; border-radius: 8px; background: #ffffff; font-size: 12.5px; font-weight: 500">Reveal</span>
+        <span style="height: 28px; display: inline-flex; align-items: center; padding: 0 10px; border: 1px solid #dee1e8; border-radius: 8px; background: #ffffff; font-size: 12.5px; font-weight: 500">Copy</span>
+      </div>
+      <ul>
+        <li>Select text and choose “Make secret”. It shows as dots, with Reveal and Copy.</li>
+        <li>Encrypted in the browser with AES-256-GCM. The key comes from your vault passphrase (PBKDF2, 600,000 rounds) and never leaves the device.</li>
+        <li>The server, AWS, backups and the calendar only ever hold ciphertext. Search skips secret text.</li>
+        <li>Locks again after 5 idle minutes. Copy clears the clipboard after 30 seconds where the browser allows it.</li>
+        <li>A lost passphrase means lost secrets, so a printable recovery key is made once.</li>
+      </ul>
+    </div>
+    <div style="display: flex; flex-direction: column; gap: 22px">
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 600">Cost</h2>
+        <table>
+          <tbody>
+            <tr><td>KMS key</td><td style="text-align: right">$1 a month + about $0.03 per 10,000 uses</td></tr>
+            <tr><td>CloudTrail management events, alarms</td><td style="text-align: right">free to a few cents</td></tr>
+            <tr><td>AWS WAF</td><td style="text-align: right">skipped: $6+ a month, little gain when every route needs sign-in</td></tr>
+            <tr><td style="font-weight: 600">Total</td><td style="text-align: right; font-weight: 600">about $1–2 a month</td></tr>
+          </tbody>
+        </table>
+      </div>
+      <div style="display: flex; flex-direction: column; gap: 10px">
+        <h2 style="margin: 0; font-size: 18px; font-weight: 600">Order of work</h2>
+        <ol>
+          <li>Security headers and CSP (no data touched).</li>
+          <li>KMS key; the table switches to it in place.</li>
+          <li>S3 on the same key; existing files re-encrypted.</li>
+          <li>Sign-in on file links.</li>
+          <li>MFA on for your account: scan a QR code at the next sign-in.</li>
+          <li>Alarms.</li>
+        </ol>
+        <p style="margin: 4px 0 0; font-size: 13.5px; line-height: 1.5; color: #3d4556"><b>Your own key later:</b> KMS accepts key material you bring. The table and bucket re-point to that key without downtime, so phase 1 does not lock you in.</p>
+      </div>
+    </div>
+  </div>
+</div>
+</main>
+</body>
+</html>

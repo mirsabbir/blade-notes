@@ -14,4 +14,5 @@ new NotesStack(app, 'BladeNotes', {
   siteDomain: need('NOTES_DOMAIN'),
   hostedZone: need('NOTES_HOSTED_ZONE'),
   authDomainPrefix: need('NOTES_AUTH_PREFIX'),
+  alertEmail: process.env.NOTES_ALERT_EMAIL,
 })

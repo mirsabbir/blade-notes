@@ -1,7 +1,7 @@
 import { useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { File, FileArchive, FileImage, FileSpreadsheet, FileText, Paperclip, X, Download, Loader2 } from 'lucide-react'
 import type { Attachment, Item } from '@blade-notes/core'
-import { attach, detach, MAX_FILE_MB } from './store'
+import { attach, detach, downloadFile, MAX_FILE_MB } from './store'
 
 function sizeLabel(n: number) {
   if (n < 1024) return `${n} B`
@@ -16,6 +16,14 @@ function iconFor(a: Attachment) {
   if (/sheet|excel|csv/.test(t)) return FileSpreadsheet
   if (/pdf|word|text|document/.test(t)) return FileText
   return File
+}
+
+async function download(a: Attachment) {
+  try {
+    await downloadFile(a.src, a.name)
+  } catch (e) {
+    alert(`Could not download ${a.name}: ${(e as Error).message}`)
+  }
 }
 
 /** The attachments list plus an "Attach files" button. Files can also be dropped on `DropZone`. */
@@ -60,13 +68,13 @@ export function Attachments({ item, uploading, onUploading }: { item: Item; uplo
           return (
             <li key={a.id} className="file">
               <Icon size={18} aria-hidden className="file-ico" />
-              <a className="file-name" href={`${a.src}?name=${encodeURIComponent(a.name)}`} title={`Download ${a.name}`}>
+              <button type="button" className="file-name link-like" title={`Download ${a.name}`} onClick={() => void download(a)}>
                 {a.name}
-              </a>
+              </button>
               <span className="file-size">{sizeLabel(a.size)}</span>
-              <a className="ghost" href={`${a.src}?name=${encodeURIComponent(a.name)}`} aria-label={`Download ${a.name}`}>
+              <button type="button" className="ghost" aria-label={`Download ${a.name}`} onClick={() => void download(a)}>
                 <Download size={15} aria-hidden />
-              </a>
+              </button>
               <button type="button" className="ghost" aria-label={`Remove ${a.name}`} onClick={() => detach(item.id, a.id)}>
                 <X size={15} aria-hidden />
               </button>

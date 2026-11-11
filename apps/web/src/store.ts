@@ -1,6 +1,6 @@
 import { useSyncExternalStore } from 'react'
 import { get, set } from 'idb-keyval'
-import { between, DEFAULT_SETTINGS, tooLarge, utf8Bytes, type Item, type PullResponse, type PushResponse, type Change, type Settings } from '@blade-notes/core'
+import { between, currentZone, DEFAULT_SETTINGS, tooLarge, utf8Bytes, ymd, type Item, type PullResponse, type PushResponse, type Change, type Settings } from '@blade-notes/core'
 import { accessToken } from './auth'
 
 /**
@@ -40,6 +40,27 @@ function commit(next: State) {
 /** The current state, for code outside React (the editor's start-up clean-up). */
 export const currentState = () => state
 
+/** For plain-DOM views (date chips): called after every change to the library or the clock. */
+export function subscribe(listener: () => void): () => void {
+  listeners.add(listener)
+  return () => listeners.delete(listener)
+}
+
+/**
+ * "Today" and local times depend on the date and the zone the device is in, which change
+ * under a running app (midnight, or landing in another country). Called on every sync tick
+ * and on focus: when either changed, everything re-renders in the new zone.
+ */
+let clock = ''
+export function checkClock(): void {
+  const d = new Date()
+  const c = `${ymd(d)}|${currentZone()}|${d.getTimezoneOffset()}`
+  if (c === clock) return
+  const first = clock === ''
+  clock = c
+  if (!first) emit()
+}
+
 export function useStore() {
   return useSyncExternalStore(
     (l) => (listeners.add(l), () => listeners.delete(l)),
@@ -75,7 +96,7 @@ function unreject(key: string): State['rejected'] {
 
 export function childrenOf(items: State['items'], parentId: string | null): Item[] {
   return Object.values(items)
-    .filter((i) => i.parentId === parentId && !i.deletedAt && i.type !== 'description')
+    .filter((i) => i.parentId === parentId && !i.deletedAt && i.type !== 'description' && i.type !== 'event')
     .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0))
 }
 
@@ -112,6 +133,80 @@ export function createDescription(ownerId: string, title: string): string {
   commit({ ...state, items: { ...state.items, [item.id]: item }, pending: mark(state.pending, `item:${item.id}`) })
   scheduleSync()
   return item.id
+}
+
+/**
+ * A date typed with @ in note, task or description `ownerId`. `at` is from core `stamp()`;
+ * the zone it was set in is kept for calendars and the "set as 09:00 in …" hint.
+ */
+export function createEvent(ownerId: string, title: string, at: string, extra: Partial<Item> = {}): string {
+  const t = now()
+  const item: Item = {
+    id: newId(), type: 'event', parentId: ownerId, rank: 'a0', title: title.slice(0, 200) || 'Untitled',
+    at, tz: currentZone(), status: 'todo', createdAt: t, updatedAt: t, ...extra,
+  }
+  commit({ ...state, items: { ...state.items, [item.id]: item }, pending: mark(state.pending, `item:${item.id}`) })
+  scheduleSync()
+  return item.id
+}
+
+/** Every date chip in a document, with the text of the line it sits in (the event's title). */
+export function chipsIn(doc: unknown): Map<string, string> {
+  type N = { type?: string; text?: string; attrs?: { id?: string }; content?: N[] }
+  const found = new Map<string, string>()
+  const walk = (n: N) => {
+    const kids = n.content ?? []
+    const chips = kids.filter((k) => k.type === 'dateChip' && k.attrs?.id)
+    if (chips.length) {
+      const line = kids.map((k) => k.text ?? '').join('').replace(/\s+/g, ' ').trim()
+      chips.forEach((c) => found.set(c.attrs!.id!, line))
+    }
+    kids.forEach(walk)
+  }
+  walk(doc as N)
+  return found
+}
+
+/**
+ * Keeps events in step with the chips in body `bodyId` after an edit: a deleted chip trashes
+ * its event, an undo brings it back, and an event follows its line's text unless its title
+ * was typed by hand.
+ */
+export function reconcileEvents(bodyId: string, doc: unknown): void {
+  const found = chipsIn(doc)
+  const t = now()
+  let items = state.items
+  let pending = state.pending
+  for (const it of Object.values(state.items)) {
+    if (it.type !== 'event' || it.parentId !== bodyId) continue
+    const line = found.get(it.id)
+    let next: Item | null = null
+    if (line === undefined) next = it.deletedAt ? null : { ...it, deletedAt: t }
+    else {
+      const title = line.slice(0, 200) || 'Untitled'
+      if (it.deletedAt || (!it.customTitle && it.title !== title)) next = { ...it, deletedAt: undefined, ...(!it.customTitle && { title }) }
+    }
+    if (!next) continue
+    items = { ...items, [it.id]: { ...next, updatedAt: t } }
+    pending = mark(pending, `item:${it.id}`)
+  }
+  if (items === state.items) return
+  commit({ ...state, items, pending })
+  scheduleSync()
+}
+
+/** The note or task a description or event belongs to (descriptions can nest). */
+export function ownerOf(items: State['items'], id: string): Item | undefined {
+  let cur = items[id]
+  while (cur && (cur.type === 'description' || cur.type === 'event')) cur = cur.parentId ? items[cur.parentId] : undefined
+  return cur
+}
+
+/** The space an item sits in. */
+export function spaceOf(items: State['items'], id: string): Item | undefined {
+  let cur = items[id]
+  while (cur && cur.type !== 'space') cur = cur.parentId ? items[cur.parentId] : undefined
+  return cur
 }
 
 /** Takes description `descId` off the phrases and list items of body `bodyId`, when its editor is not open. */
@@ -188,6 +283,9 @@ export function setBody(id: string, doc: unknown): void {
 
 // ---------------- sync ----------------
 
+/** A signed-in call to this site's API; the error carries the server's words when it sent some. */
+export const api = <T>(method: string, path: string, body?: unknown): Promise<T> => call<T>(method, path, body)
+
 async function call<T>(method: string, path: string, body?: unknown): Promise<T> {
   const token = await accessToken()
   if (!token) throw new SignedOut()
@@ -197,7 +295,10 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
     body: body === undefined ? undefined : JSON.stringify(body),
   })
   if (res.status === 401) throw new SignedOut()
-  if (!res.ok) throw new Error(`${method} ${path}: ${res.status}`)
+  if (!res.ok) {
+    const said = (await res.json().catch(() => null)) as { error?: string } | null
+    throw new Error(said?.error ?? `${method} ${path}: ${res.status}`)
+  }
   return (await res.json()) as T
 }
 class SignedOut extends Error {}
@@ -358,6 +459,36 @@ export async function uploadFile(file: File): Promise<string> {
   return src
 }
 export const uploadImage = uploadFile
+
+/**
+ * Files need sign-in: `/api/files/...` answers with a 60-second signed link, which is fetched
+ * at once and kept in memory as a blob URL for this page's life. Nothing reaches the browser cache.
+ */
+const blobs = new Map<string, Promise<string>>()
+export function fileBlobUrl(src: string): Promise<string> {
+  if (!src.startsWith('/api/files/')) return Promise.resolve(src)
+  let p = blobs.get(src)
+  if (!p) {
+    p = (async () => {
+      const { url } = await call<{ url: string }>('GET', src)
+      const res = await fetch(url, { cache: 'no-store' })
+      if (!res.ok) throw new Error(`file: ${res.status}`)
+      return URL.createObjectURL(await res.blob())
+    })()
+    p.catch(() => blobs.delete(src)) // a failure is retried next time
+    blobs.set(src, p)
+  }
+  return p
+}
+
+/** Starts a download of an attachment under its original name. */
+export async function downloadFile(src: string, name: string): Promise<void> {
+  const { url } = await call<{ url: string }>('GET', `${src}?name=${encodeURIComponent(name)}`)
+  const a = document.createElement('a')
+  a.href = url
+  a.rel = 'noopener'
+  a.click()
+}
 
 export async function attach(itemId: string, files: File[]): Promise<void> {
   for (const file of files) {

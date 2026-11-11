@@ -1,0 +1,21 @@
+{
+  "v": 3,
+  "createdOnFiles": { "v": 1, "at": "2026-11-11T12:00:00Z" },
+  "title": "Blade Notes — Schedule, Copy & Security",
+  "launch": { "view": "canvas" },
+  "pages": [],
+  "boards": {
+    "Main.dc.html": { "x": 0, "y": 0, "w": 1440, "h": 900, "title": "Try it: schedule while you write", "is_interactive": true },
+    "Gesture.dc.html": { "x": 1520, "y": 0, "w": 880, "h": 900, "title": "The @ gesture" },
+    "Copy.dc.html": { "x": 0, "y": 1300, "w": 1280, "h": 960, "title": "Copy keeps every date" },
+    "Sync.dc.html": { "x": 1360, "y": 1300, "w": 1280, "h": 960, "title": "From chip to calendar" },
+    "Security.dc.html": { "x": 0, "y": 2660, "w": 1440, "h": 1900, "title": "Security breakdown" }
+  },
+  "order": ["Main.dc.html", "Gesture.dc.html", "Copy.dc.html", "Sync.dc.html", "Security.dc.html"],
+  "notes": {
+    "t1": { "x": 0, "y": -300, "text": "Inline scheduling and Agenda", "kind": "title1", "maxW": 2400 },
+    "t2": { "x": 0, "y": 1000, "text": "Copy and calendar sync", "kind": "title1", "maxW": 2640 },
+    "t3": { "x": 0, "y": 2360, "text": "Security: at rest, in transit, and what each layer stops", "kind": "title1", "maxW": 1440 }
+  },
+  "designSystems": []
+}

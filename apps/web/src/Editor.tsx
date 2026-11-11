@@ -10,10 +10,42 @@ import Image from '@tiptap/extension-image'
 import { TableKit } from '@tiptap/extension-table'
 import {
   Bold, Italic, Underline, Strikethrough, Code, Highlighter, List, ListOrdered, ListTodo,
-  TextQuote, SquareCode, Table, Link, ImagePlus, Undo2, Redo2, NotebookText,
+  TextQuote, SquareCode, Table, Link, ImagePlus, Undo2, Redo2, NotebookText, CalendarPlus, Lock,
 } from 'lucide-react'
-import { currentState, docText, setBody, settingsOf, stripDescription, uploadImage, useStore } from './store'
+import { currentState, docText, fileBlobUrl, reconcileEvents, setBody, settingsOf, stripDescription, uploadImage, useStore } from './store'
 import { Describe, DescribeMark, describeSelection, describedIds, removeDescription, type DescribeHooks } from './describe'
+import { DateChip, dateQueryKey, startSchedule, type DateQuery, type ScheduleHooks } from './schedule'
+import { ChipPopover, DatePicker } from './DatePicker'
+import { Secret, makeSecret } from './secret'
+import { requestUnlock } from './VaultPanel'
+
+/** Images in notes are private files: shown from a blob fetched with sign-in, never a public link. */
+const SignedImage = Image.extend({
+  addNodeView() {
+    return ({ node }) => {
+      let cur = node
+      const img = document.createElement('img')
+      const load = () => {
+        const src = cur.attrs.src as string
+        img.alt = (cur.attrs.alt as string | null) ?? ''
+        fileBlobUrl(src)
+          .then((url) => cur.attrs.src === src && (img.src = url))
+          .catch(() => (img.alt = `${img.alt} (could not load the image)`))
+      }
+      load()
+      return {
+        dom: img,
+        update: (n) => {
+          if (n.type !== cur.type) return false
+          const changed = n.attrs.src !== cur.attrs.src
+          cur = n
+          if (changed) load()
+          return true
+        },
+      }
+    }
+  },
+})
 
 interface Props {
   id: string
@@ -21,13 +53,23 @@ interface Props {
   placeholder: string
   /** Opens and creates hidden descriptions of list items and phrases. */
   describe: DescribeHooks
+  /** An event to point at once open (from the Agenda or a calendar link): its chip flashes. */
+  flash?: string
+  /** Changes on every request, so asking again for the same date flashes it again. */
+  flashKey?: number
+  /** Opens Settings › Security, where the vault for Secret blocks is made. */
+  onOpenVault?: () => void
 }
 
 /** Saves 500 ms after the last keystroke. Remounted per note (key = id) by the caller. */
-export function Editor({ id, doc, placeholder, describe }: Props) {
+export function Editor({ id, doc, placeholder, describe, flash, flashKey, onOpenVault }: Props) {
   const save = useRef<ReturnType<typeof setTimeout>>(undefined)
   const latest = useRef(describe)
   latest.current = describe
+  const vaultOpener = useRef(onOpenVault)
+  vaultOpener.current = onOpenVault
+  const [chip, setChip] = useState<{ id: string; anchor: HTMLElement } | null>(null)
+  const schedule = useMemo<ScheduleHooks>(() => ({ ownerId: id, openChip: (eventId, anchor) => setChip({ id: eventId, anchor }) }), [id])
   // One stable object for the extension; it always calls the caller's latest handlers.
   // `remove` is called later, maybe after this editor has closed (a nested description was open
   // on top of it): then the stored document is edited instead.
@@ -46,11 +88,13 @@ export function Editor({ id, doc, placeholder, describe }: Props) {
       TaskList,
       TaskItem.configure({ nested: true }),
       Highlight,
-      Image,
+      SignedImage,
       TableKit.configure({ table: { resizable: false } }),
       Placeholder.configure({ placeholder }),
       DescribeMark,
       Describe.configure({ hooks }),
+      DateChip.configure({ hooks: schedule }),
+      Secret.configure({ requestUnlock, openVaultSettings: () => vaultOpener.current?.() }),
     ],
     content: (doc as object) ?? '',
     editorProps: {
@@ -64,7 +108,7 @@ export function Editor({ id, doc, placeholder, describe }: Props) {
     },
     onUpdate: ({ editor }) => {
       clearTimeout(save.current)
-      save.current = setTimeout(() => setBody(id, editor.getJSON()), 500)
+      save.current = setTimeout(() => saveDoc(id, editor.getJSON()), 500)
     },
     immediatelyRender: true,
   })
@@ -82,11 +126,30 @@ export function Editor({ id, doc, placeholder, describe }: Props) {
     () => () => {
       if (save.current && editorRef.current) {
         clearTimeout(save.current)
-        setBody(id, editorRef.current.getJSON())
+        saveDoc(id, editorRef.current.getJSON())
       }
     },
     [id],
   )
+
+  // Opened from the Agenda or a calendar link: show that date and make it flash.
+  useEffect(() => {
+    if (!flash) return
+    const t = setTimeout(() => {
+      const el = editor.view.dom.querySelector<HTMLElement>(`[data-event="${CSS.escape(flash)}"]`)
+      if (!el) return
+      el.scrollIntoView({ block: 'center', behavior: 'smooth' })
+      el.classList.add('flash')
+      setTimeout(() => el.classList.remove('flash'), 2000)
+    }, 80)
+    return () => clearTimeout(t)
+  }, [editor, flash, flashKey])
+
+  const query = useEditorState({
+    editor,
+    selector: ({ editor: e }) => dateQueryKey.getState(e.state)?.active ?? null,
+    equalityFn: (a: DateQuery | null, b: DateQuery | null) => a?.from === b?.from && a?.to === b?.to && a?.query === b?.query,
+  })
 
   return (
     <>
@@ -105,8 +168,16 @@ export function Editor({ id, doc, placeholder, describe }: Props) {
         <EditorContent editor={editor} />
       </div>
       {peek && <Peek id={peek.id} rect={peek.rect} />}
+      {query && !chip && <DatePicker editor={editor} query={query} ownerId={id} />}
+      {chip && <ChipPopover editor={editor} id={chip.id} anchor={chip.anchor} onClose={() => setChip(null)} />}
     </>
   )
+}
+
+/** Saves the text and keeps its date chips' events in step (titles, removals, undo). */
+function saveDoc(id: string, doc: unknown) {
+  setBody(id, doc)
+  reconcileEvents(id, doc)
 }
 
 /** The start of a description, shown while hovering its phrase (Settings › Descriptions can turn it off). */
@@ -137,6 +208,12 @@ function BubbleButtons({ editor, hooks }: { editor: TiptapEditor; hooks: Describ
           <NotebookText size={15} aria-hidden /> Describe
         </button>
       )}
+      <button type="button" className="bubble-describe" onClick={() => startSchedule(editor)} title="Give these words a date (or type @)">
+        <CalendarPlus size={15} aria-hidden /> Schedule
+      </button>
+      <button type="button" className="bubble-describe" onClick={() => void makeSecret(editor)} title="Hide this as a secret: only your vault passphrase shows it">
+        <Lock size={15} aria-hidden /> Secret
+      </button>
     </>
   )
 }
@@ -221,6 +298,8 @@ function Toolbar({ editor, hooks }: { editor: TiptapEditor; hooks: DescribeHooks
       {btn('Link', s.link, setLink, Link)}
       {btn('Image', false, () => file.current?.click(), ImagePlus)}
       {btn('Description for the selection or list item (⌘⇧D)', false, () => describeSelection(editor, hooks), NotebookText)}
+      {btn('Schedule: give this line a date (or type @)', false, () => startSchedule(editor), CalendarPlus)}
+      {btn('Secret: hide the selected text behind your vault passphrase', false, () => void makeSecret(editor), Lock)}
       <input
         ref={file}
         type="file"

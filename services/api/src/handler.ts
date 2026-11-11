@@ -30,12 +30,11 @@ const json = (statusCode: number, body: unknown): Result => ({
 export async function handler(event: Event): Promise<Result> {
   const route = event.routeKey
   try {
-    // No login on this route: an <img> tag cannot send a token. The URL holds a random UUID, which is the key.
-    if (route === 'GET /api/files/{owner}/{name}')
-      return await file(event.pathParameters?.owner ?? '', event.pathParameters?.name ?? '', event.queryStringParameters?.name)
     const sub = event.requestContext.authorizer?.jwt?.claims?.sub
     if (typeof sub !== 'string') return json(401, { error: 'no user' })
     const pk = `USER#${sub}`
+    if (route === 'GET /api/files/{owner}/{name}')
+      return await file(sub, event.pathParameters?.owner ?? '', event.pathParameters?.name ?? '', event.queryStringParameters?.name)
     if (route === 'GET /api/sync') return json(200, await pull(pk, Number(event.queryStringParameters?.since ?? 0)))
     if (route === 'POST /api/sync') return json(200, await push(pk, parse<PushRequest>(event)))
     if (route === 'POST /api/uploads') return json(200, await upload(sub, parse<{ contentType?: string; name?: string; size?: number }>(event)))
@@ -177,14 +176,17 @@ async function upload(sub: string, req: { contentType?: string; name?: string; s
   return { upload: post, src: `/api/files/${sub}/${key}` }
 }
 
-/** `?name=` sets the download's file name; without it the browser shows the file (images in notes). */
-async function file(owner: string, key: string, downloadName?: string): Promise<Result> {
-  if (!/^[0-9a-f-]{36}$/.test(owner) || !FILE_NAME.test(key)) return json(404, { error: 'not found' })
+/**
+ * A signed S3 link to one of the caller's own files, valid for 60 seconds; the app fetches it
+ * at once and shows the file from memory. `?name=` makes it a download with that file name.
+ */
+async function file(sub: string, owner: string, key: string, downloadName?: string): Promise<Result> {
+  if (owner !== sub || !FILE_NAME.test(key)) return json(404, { error: 'not found' })
   const disposition = downloadName ? `attachment; filename*=UTF-8''${encodeURIComponent(downloadName.slice(0, 200))}` : undefined
   const url = await getSignedUrl(
     s3,
-    new GetObjectCommand({ Bucket: BUCKET, Key: `users/${owner}/${key}`, ResponseContentDisposition: disposition }),
-    { expiresIn: 3600 },
+    new GetObjectCommand({ Bucket: BUCKET, Key: `users/${owner}/${key}`, ResponseContentDisposition: disposition, ResponseCacheControl: 'no-store' }),
+    { expiresIn: 60 },
   )
-  return { statusCode: 302, headers: { location: url, 'cache-control': 'private, max-age=3000' } }
+  return json(200, { url })
 }

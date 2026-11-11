@@ -9,8 +9,12 @@ A personal notes and tasks app built around **blades**: click a space or folder 
 - Tasks with status, due date, priority and a rich-text description
 - Works offline: the whole library is kept in the browser and syncs when online
 - Search across titles and note text (⌘K), light and dark mode
+- Dates while you write: type `@sun 3pm` anywhere; an Agenda by space or day; Google, Outlook and iCloud calendars; times follow you across time zones
+- Secret blocks for passwords, encrypted in the browser with your own passphrase; everything else encrypted at rest with the app's own KMS key
+- Copy a whole note or task as rich text and Markdown, dates and descriptions included
+- Settings › How to lists every gesture and shortcut
 
-Runs in the browser and as desktop apps for **macOS (Apple Silicon)** and **Windows (x64)**, which update themselves from GitHub Releases (Settings → About & updates). Mobile apps (Expo), Google and Apple Calendar, and AI features come next.
+Runs in the browser and as desktop apps for **macOS (Apple Silicon)** and **Windows (x64)**, which update themselves from GitHub Releases (Settings → About & updates). Mobile apps (Expo) and AI features come next.
 
 ## Desktop apps
 
@@ -33,15 +37,17 @@ flowchart LR
   B -.->|sign-in| C[Cognito]
 ```
 
-Serverless on AWS, so an idle account costs almost nothing (well under $1/month for one person). See [docs/architecture.md](docs/architecture.md) for the data model and sync protocol.
+Serverless on AWS, so an idle account costs almost nothing (well under $1/month for one person). Docs: [docs/README.md](docs/README.md) (architecture, runbooks, decisions, work logs, design records).
 
 | Folder | What |
 |---|---|
 | `apps/web` | React + Vite web app |
 | `packages/core` | Shared types and fractional ranks |
-| `services/api` | The Lambda behind `/api` |
+| `services/api` | The Lambda behind `/api` (sync, uploads, files) |
+| `services/calendar` | Calendar sync: `/api/calendar` and a worker on the table's stream |
 | `infra` | AWS CDK stack: DynamoDB, S3, Cognito, API, CloudFront, DNS |
 | `assets/icon` | App icon sources |
+| `docs` | Architecture, runbooks, decisions, work logs, design records |
 
 ## Deploy your own
 

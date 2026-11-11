@@ -6,7 +6,7 @@ import './styles.css'
 import { App } from './App'
 import { UpdateBanner } from './Updates'
 import { completeSignIn, isSignedIn, loadConfig, signIn } from './auth'
-import { load, sync, useStore } from './store'
+import { checkClock, load, sync, useStore } from './store'
 
 function Root() {
   const [phase, setPhase] = useState<'starting' | 'signed-out' | 'ready' | 'failed'>('starting')
@@ -34,7 +34,12 @@ function Root() {
   // when the tab comes back and when the network returns.
   useEffect(() => {
     if (phase !== 'ready') return
-    const tick = () => document.visibilityState === 'visible' && void sync()
+    // The clock check redraws dates when the day or the device's zone has changed (travel).
+    const tick = () => {
+      checkClock()
+      if (document.visibilityState === 'visible') void sync()
+    }
+    checkClock()
     const id = setInterval(tick, 10_000)
     const events = ['focus', 'online'] as const
     events.forEach((e) => window.addEventListener(e, tick))

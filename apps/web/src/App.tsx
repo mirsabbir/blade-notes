@@ -2,12 +2,15 @@ import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
 import type { Item, TaskStatus } from '@blade-notes/core'
 import {
   ChevronRight, Circle, CircleCheck, FileText, Folder, Maximize2, Moon, PanelLeftClose, PanelLeftOpen,
-  Plus, Search, Sun, Trash2, LogOut, CloudOff, RefreshCw, Check, AlertTriangle, Settings, Paperclip,
+  Plus, Search, Sun, Trash2, LogOut, CloudOff, RefreshCw, Check, AlertTriangle, Settings, Paperclip, CalendarCheck, Copy,
 } from 'lucide-react'
 import { useOpenUpdatesFromMenu } from './Updates'
-import { SettingsDialog, type SettingsSection } from './Settings'
+import { calendarReturn, openSettings, SettingsDialog, useSettingsRequests, type SettingsSection } from './Settings'
+import { AgendaBlade, dueNow, entriesOf, type Entry } from './Agenda'
+import { copyItem } from './copy'
+import { VaultHost } from './VaultPanel'
 import { Attachments, DropZone } from './Attachments'
-import { childrenOf, clearFresh, create, createDescription, docText, freshId, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
+import { childrenOf, clearFresh, create, createDescription, docText, freshId, ownerOf, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
 import { Description, TooLarge, type OpenDescription } from './Description'
 import type { DescribeHooks } from './describe'
 
@@ -42,6 +45,7 @@ const BLADE = 256
 const STRIP = 44
 const EDITOR_MIN = 400
 const DESC_PANEL = 340
+const AGENDA = 320
 
 function useWindowWidth(): number {
   const [w, setW] = useState(window.innerWidth)
@@ -60,6 +64,11 @@ export function App() {
   const [manual, setManual] = useState<{ [blade: number]: boolean }>({})
   const [focus, setFocus] = useState(false)
   const [dark, setDark] = usePersisted('bn:dark', matchMedia('(prefers-color-scheme: dark)').matches)
+  const [agenda, setAgenda] = usePersisted('bn:agenda', false)
+  const [agendaGroup, setAgendaGroup] = usePersisted<'space' | 'day'>('bn:agenda-group', 'space')
+  // The date to point at once its note or task is open: from the Agenda or a calendar link.
+  const [flash, setFlash] = useState<{ id: string; n: number }>()
+  const [link, setLink] = useState(() => deepLink())
 
   useEffect(() => {
     document.documentElement.classList.toggle('dark', dark)
@@ -84,6 +93,36 @@ export function App() {
     setManual((m) => Object.fromEntries(Object.entries(m).filter(([k, v]) => Number(k) < level && v)))
     setFocus(false)
   }
+  /** Opens `id` with every folder above it, as search does. */
+  const reveal = (id: string) => {
+    const trail: string[] = []
+    for (let cur: Item | undefined = items[id]; cur; cur = cur.parentId ? items[cur.parentId] : undefined) trail.unshift(cur.id)
+    setPath(trail)
+    setManual({})
+    setFocus(false)
+  }
+  const openEntry = (e: Entry) => {
+    reveal(e.ownerId)
+    setFlash({ id: e.id, n: Date.now() })
+  }
+  // Back from connecting a calendar (?calendar=…): show how it went.
+  useEffect(() => {
+    if (!calendarReturn()) return
+    openSettings('calendars')
+    history.replaceState(null, '', '/')
+  }, [])
+
+  // A calendar event's link (/t/<note or task>#<event>) opens that item once it is on this device.
+  useEffect(() => {
+    if (!link) return
+    const owner = ownerOf(items, link.id)
+    if (!owner) return
+    reveal(owner.id)
+    if (link.event) setFlash({ id: link.event, n: Date.now() })
+    setLink(null)
+    history.replaceState(null, '', '/')
+  }, [link, items]) // eslint-disable-line react-hooks/exhaustive-deps
+
   // Open descriptions belong to the open note or task: switching to another closes them.
   const [descs, setDescs] = useState<OpenDescription[]>([])
   useEffect(() => setDescs([]), [selected?.id])
@@ -95,7 +134,7 @@ export function App() {
   // Fold as many blades as it takes for the note (and an open description blade) to fit the window.
   const width = useWindowWidth()
   const panelOpen = descs.length > 0 && settingsOf(state).descriptionView === 'panel' && width > 900
-  const fits = Math.floor((width - EDITOR_MIN - (panelOpen ? DESC_PANEL : 0) - STRIP * chain.length) / BLADE)
+  const fits = Math.floor((width - EDITOR_MIN - (panelOpen ? DESC_PANEL : 0) - (agenda ? AGENDA : 0) - STRIP * chain.length) / BLADE)
   const maxOpen = width <= 720 ? settingsOf(state).bladesOpen : Math.max(panelOpen ? 0 : 1, Math.min(settingsOf(state).bladesOpen, fits))
   const folded = (i: number) => focus || (manual[i] ?? i < chain.length - maxOpen)
 
@@ -117,18 +156,12 @@ export function App() {
             key="root"
             items={items}
             selectedId={live[0]}
-            onOpen={(id) => {
-              const it = items[id]!
-              // A search hit can be anywhere: open the whole path to it.
-              const trail: string[] = []
-              for (let cur: Item | undefined = it; cur; cur = cur.parentId ? items[cur.parentId] : undefined) trail.unshift(cur.id)
-              setPath(trail)
-              setManual({})
-              setFocus(false)
-            }}
+            onOpen={reveal} // a search hit can be anywhere: open the whole path to it
             onFold={() => setManual((m) => ({ ...m, [0]: true }))}
             dark={dark}
             onToggleDark={() => setDark(!dark)}
+            agendaOpen={agenda}
+            onAgenda={() => setAgenda(!agenda)}
           />
         ) : (
           <FolderBlade
@@ -143,7 +176,11 @@ export function App() {
           />
         ),
       )}
+      {agenda && !focus && (
+        <AgendaBlade group={agendaGroup} onGroup={setAgendaGroup} onOpen={openEntry} onFold={() => setAgenda(false)} activeId={selected?.id} />
+      )}
       <EditorPane
+        flash={flash}
         chain={chain}
         selected={selected}
         bodies={state.bodies}
@@ -164,8 +201,17 @@ export function App() {
         }}
       />
       {descs.length > 0 && <Description stack={descs} onChange={setDescs} />}
+      <VaultHost />
     </div>
   )
+}
+
+/** `/t/<id>#<event>`: where a calendar event's link points. */
+function deepLink(): { id: string; event?: string } | null {
+  const m = /^\/t\/([\w-]{1,64})$/.exec(location.pathname)
+  if (!m) return null
+  const event = /^#([\w-]{1,64})$/.exec(location.hash)?.[1]
+  return { id: m[1]!, ...(event && { event }) }
 }
 
 function spaceColor(items: { [id: string]: Item }, node: Item | null): string {
@@ -202,12 +248,15 @@ function LibraryBlade(props: {
   onFold: () => void
   dark: boolean
   onToggleDark: () => void
+  agendaOpen: boolean
+  onAgenda: () => void
 }) {
   const { items } = props
   const { state } = useStore()
   const [q, setQ] = useState('')
   const [settings, setSettings] = useState<SettingsSection | null>(null)
   useOpenUpdatesFromMenu(useCallback(() => setSettings('about'), []))
+  useSettingsRequests(setSettings)
   const spaces = childrenOf(items, null)
   const search = useRef<HTMLInputElement>(null)
 
@@ -228,13 +277,14 @@ function LibraryBlade(props: {
     return Object.values(items)
       .filter((i) => !i.deletedAt && (i.title.toLowerCase().includes(term) || docText(state.bodies[i.id]?.doc).toLowerCase().includes(term)))
       // A match inside a description finds the note or task it belongs to.
-      .map((i) => (i.type === 'description' ? items[i.parentId ?? ''] : i))
+      .map((i) => (i.type === 'description' || i.type === 'event' ? ownerOf(items, i.id) : i))
       .filter((i, n, all): i is Item => !!i && !i.deletedAt && all.indexOf(i) === n)
       .slice(0, 50)
   }, [q, items, state.bodies])
 
-  const today = new Date().toISOString().slice(0, 10)
-  const dueToday = Object.values(items).filter((i) => i.type === 'task' && !i.deletedAt && i.status !== 'done' && i.due && i.due.slice(0, 10) <= today)
+  const entries = entriesOf(items)
+  const open = entries.filter((e) => !e.done).length
+  const now = dueNow(entries)
 
   return (
     <section className="blade" aria-label="Library">
@@ -261,14 +311,16 @@ function LibraryBlade(props: {
           </>
         ) : (
           <>
-            {dueToday.length > 0 && (
-              <>
-                <div className="section"><span>Due today or late</span><span>{dueToday.length}</span></div>
-                {dueToday.map((t) => (
-                  <Row key={t.id} item={t} items={items} active={false} onOpen={() => props.onOpen(t.id)} subtitle={trail(items, t)} />
-                ))}
-              </>
-            )}
+            <div className={`row${props.agendaOpen ? ' active' : ''}`}>
+              <button type="button" className="row-main" aria-pressed={props.agendaOpen} onClick={props.onAgenda}>
+                <CalendarCheck size={16} className="ico" aria-hidden />
+                <span className="name">
+                  Agenda
+                  <small>{open === 0 ? 'Type @ in any note to add a date' : now ? `${now} today or late` : `${open} coming up`}</small>
+                </span>
+                {now > 0 && <span className="due today">{now}</span>}
+              </button>
+            </div>
             <div className="section"><span>Spaces</span><span>{spaces.length}</span></div>
             {spaces.length === 0 && <p className="empty">Start with a space, for example a project or “Personal”.</p>}
             {spaces.map((s) => (
@@ -292,7 +344,7 @@ function LibraryBlade(props: {
         <button type="button" className="ghost" onClick={() => setSettings('general')} aria-label="Settings" title="Settings">
           <Settings size={16} aria-hidden />
         </button>
-        <button type="button" className="ghost" onClick={signOut} aria-label="Sign out" title="Sign out">
+        <button type="button" className="ghost" onClick={() => void signOut()} aria-label="Sign out" title="Sign out">
           <LogOut size={16} aria-hidden />
         </button>
       </div>
@@ -506,6 +558,7 @@ function SyncBadge({ status, pending }: { status: SyncStatus; pending: number })
 }
 
 function EditorPane(props: {
+  flash?: { id: string; n: number }
   chain: (Item | null)[]
   selected: Item | null
   bodies: { [id: string]: { doc: unknown; seq: number } }
@@ -523,6 +576,18 @@ function EditorPane(props: {
   const folder = chain.at(-1) ?? null
   const crumbs = chain.slice(1) as Item[]
   const [uploading, setUploading] = useState<string[]>([])
+  const [copied, setCopied] = useState<'yes' | 'failed' | null>(null)
+  useEffect(() => setCopied(null), [selected?.id])
+  const copy = async () => {
+    if (!selected) return
+    try {
+      await copyItem(selected)
+      setCopied('yes')
+    } catch {
+      setCopied('failed')
+    }
+    setTimeout(() => setCopied(null), 2500)
+  }
   return (
     <main className="editor">
       <header className="editor-head">
@@ -548,6 +613,12 @@ function EditorPane(props: {
         <Unsynced rejected={props.rejected} items={props.items} />
         {/* "Saved" next to "can't sync" would contradict it. */}
         {!(Object.keys(props.rejected).length && props.status === 'idle' && !props.pendingCount) && <SyncBadge status={props.status} pending={props.pendingCount} />}
+        {selected && (
+          <button type="button" className="btn" onClick={() => void copy()} title="Copy everything: text, dates, descriptions, as rich text and Markdown">
+            {copied === 'yes' ? <Check size={14} aria-hidden /> : <Copy size={14} aria-hidden />}
+            {copied === 'yes' ? 'Copied' : copied === 'failed' ? 'Copy blocked' : 'Copy'}
+          </button>
+        )}
         <button type="button" className={props.focus ? 'btn on' : 'btn'} aria-pressed={props.focus} onClick={props.onFocus} title="Fold every blade">
           <Maximize2 size={14} aria-hidden /> Focus
         </button>
@@ -567,6 +638,9 @@ function EditorPane(props: {
                 id={selected.id}
                 doc={props.bodies[selected.id]?.doc}
                 describe={props.describe}
+                flash={props.flash && props.flash.id}
+                flashKey={props.flash?.n}
+                onOpenVault={() => openSettings('security')}
                 placeholder={selected.type === 'task' ? 'Add a description: steps, links, code, a checklist.' : 'Start writing. Markdown shortcuts work: #, -, [ ], >, ```'}
               />
             </div>

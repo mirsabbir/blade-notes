@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>From chip to calendar</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.s code{font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;padding:1px 6px;border-radius:6px;background:#eef2f9;color:#14295f}
+</style>
+</helmet>
+<div class="s" style="position: relative; width: 1280px; height: 960px; background: #ffffff; color: #0d111b; font-family: 'Geist', system-ui, sans-serif">
+<svg width="63" height="8" viewBox="0 0 63 8" preserveAspectRatio="none" style="position: absolute; left: 240px; top: 252px; width: 63px; height: 8px; overflow: visible; fill: none; stroke: #8b94a7; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"><defs><marker id="dc-arrow-head-filled-1" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#8b94a7" stroke="none" style="stroke: none; fill: #8b94a7; fill: context-stroke"></path></marker></defs><path d="M 0 4 L 59 4" marker-end="url(#dc-arrow-head-filled-1)"></path></svg>
+<svg width="63" height="8" viewBox="0 0 63 8" preserveAspectRatio="none" style="position: absolute; left: 480px; top: 252px; width: 63px; height: 8px; overflow: visible; fill: none; stroke: #8b94a7; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"><defs><marker id="dc-arrow-head-filled-2" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#8b94a7" stroke="none" style="stroke: none; fill: #8b94a7; fill: context-stroke"></path></marker></defs><path d="M 0 4 L 59 4" marker-end="url(#dc-arrow-head-filled-2)"></path></svg>
+<svg width="63" height="8" viewBox="0 0 63 8" preserveAspectRatio="none" style="position: absolute; left: 720px; top: 252px; width: 63px; height: 8px; overflow: visible; fill: none; stroke: #8b94a7; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"><defs><marker id="dc-arrow-head-filled-3" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#8b94a7" stroke="none" style="stroke: none; fill: #8b94a7; fill: context-stroke"></path></marker></defs><path d="M 0 4 L 59 4" marker-end="url(#dc-arrow-head-filled-3)"></path></svg>
+<svg width="63" height="8" viewBox="0 0 63 8" preserveAspectRatio="none" style="position: absolute; left: 960px; top: 252px; width: 63px; height: 8px; overflow: visible; fill: none; stroke: #8b94a7; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"><defs><marker id="dc-arrow-head-filled-4" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#8b94a7" stroke="none" style="stroke: none; fill: #8b94a7; fill: context-stroke"></path></marker></defs><path d="M 0 4 L 59 4" marker-end="url(#dc-arrow-head-filled-4)"></path></svg>
+<svg width="8" height="79" viewBox="0 0 8 79" preserveAspectRatio="none" style="position: absolute; left: 388px; top: 312px; width: 8px; height: 79px; overflow: visible; fill: none; stroke: #8b94a7; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"><defs><marker id="dc-arrow-head-filled-5" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#8b94a7" stroke="none" style="stroke: none; fill: #8b94a7; fill: context-stroke"></path></marker></defs><path d="M 4 0 L 4 75" marker-end="url(#dc-arrow-head-filled-5)"></path></svg>
+<svg width="8" height="79" viewBox="0 0 8 79" preserveAspectRatio="none" style="position: absolute; left: 1108px; top: 312px; width: 8px; height: 79px; overflow: visible; fill: none; stroke: #8b94a7; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round"><defs><marker id="dc-arrow-head-filled-6" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#8b94a7" stroke="none" style="stroke: none; fill: #8b94a7; fill: context-stroke"></path></marker></defs><path d="M 4 0 L 4 75" marker-end="url(#dc-arrow-head-filled-6)"></path></svg>
+<svg width="8" height="80" viewBox="0 0 8 80" preserveAspectRatio="none" style="position: absolute; left: 1108px; top: 504px; width: 8px; height: 80px; overflow: visible; fill: none; stroke: #2857e5; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 6 6"><path d="M 4 0 L 4 80"></path></svg>
+<svg width="960" height="8" viewBox="0 0 960 8" preserveAspectRatio="none" style="position: absolute; left: 152px; top: 580px; width: 960px; height: 8px; overflow: visible; fill: none; stroke: #2857e5; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 6 6"><path d="M 960 4 L 0 4"></path></svg>
+<svg width="8" height="271" viewBox="0 0 8 271" preserveAspectRatio="none" style="position: absolute; left: 148px; top: 313px; width: 8px; height: 271px; overflow: visible; fill: none; stroke: #2857e5; stroke-width: 2; stroke-linecap: round; stroke-linejoin: round; stroke-dasharray: 6 6"><defs><marker id="dc-arrow-head-filled-7" orient="auto" markerWidth="5" markerHeight="5" refX="2" refY="2" overflow="visible"><path d="M0 0 L4 2 L0 4 Z" fill="#2857e5" stroke="none" style="stroke: none; fill: #2857e5; fill: context-stroke"></path></marker></defs><path d="M 4 271 L 4 4" marker-end="url(#dc-arrow-head-filled-7)"></path></svg>
+
+<div style="position: absolute; left: 64px; top: 56px; font-size: 30px; font-weight: 650; letter-spacing: -0.01em">From chip to calendar</div>
+<div style="position: absolute; left: 64px; top: 104px; width: 1080px; font-size: 15px; line-height: 1.55; color: #3d4556">The chip is a link to a hidden <b>event</b> item, the same way a hidden description works today. The item is the truth: the Agenda reads it on the device, and a small worker on AWS writes it into the space’s calendar.</div>
+
+<div style="position: absolute; left: 64px; top: 200px; width: 176px; height: 112px; box-sizing: border-box; padding: 12px; display: flex; align-items: center; background: #f6f9ff; border: 1px solid #2857e5; border-radius: 10px; font-size: 13px; line-height: 18px"><span><b>1 · Editor</b><br>You type @sun 3pm; a chip goes into the line.</span></div>
+<div style="position: absolute; left: 304px; top: 200px; width: 176px; height: 112px; box-sizing: border-box; padding: 12px; display: flex; align-items: center; background: #ffffff; border: 1px solid #dee1e8; border-radius: 10px; font-size: 13px; line-height: 18px"><span><b>2 · Event item</b><br>Hidden, its parent is the task. Saved on this device first.</span></div>
+<div style="position: absolute; left: 544px; top: 200px; width: 176px; height: 112px; box-sizing: border-box; padding: 12px; display: flex; align-items: center; background: #ffffff; border: 1px solid #dee1e8; border-radius: 10px; font-size: 13px; line-height: 18px"><span><b>3 · Sync API</b><br>/api/sync, the same path as notes. HTTPS and your sign-in.</span></div>
+<div style="position: absolute; left: 784px; top: 200px; width: 176px; height: 112px; box-sizing: border-box; padding: 12px; display: flex; align-items: center; background: #ffffff; border: 1px solid #dee1e8; border-radius: 10px; font-size: 13px; line-height: 18px"><span><b>4 · DynamoDB</b><br>Encrypted with your KMS key. A stream sees each change.</span></div>
+<div style="position: absolute; left: 1024px; top: 200px; width: 176px; height: 112px; box-sizing: border-box; padding: 12px; display: flex; align-items: center; background: #ffffff; border: 1px solid #dee1e8; border-radius: 10px; font-size: 13px; line-height: 18px"><span><b>5 · Calendar worker</b><br>A Lambda creates, moves or deletes the calendar event.</span></div>
+<div style="position: absolute; left: 304px; top: 392px; width: 176px; height: 112px; box-sizing: border-box; padding: 12px; display: flex; align-items: center; background: #ffffff; border: 1px solid #dee1e8; border-radius: 10px; font-size: 13px; line-height: 18px"><span><b>Agenda blade</b><br>Reads event items and task due dates on the device. Works offline.</span></div>
+<div style="position: absolute; left: 1024px; top: 392px; width: 176px; height: 112px; box-sizing: border-box; padding: 12px; display: flex; align-items: center; background: #ffffff; border: 1px solid #dee1e8; border-radius: 10px; font-size: 13px; line-height: 18px"><span><b>Your calendars</b><br>Google, Outlook or iCloud: the one each space picks in Settings.</span></div>
+
+<div style="position: absolute; left: 272px; top: 556px; width: 720px; text-align: center; font-size: 13px; line-height: 16px; color: #14295f">Every calendar event links back: notes.mirsabbiralam.com/t/&lt;task&gt;#&lt;event&gt; opens the task and the chip flashes</div>
+
+<div style="position: absolute; left: 64px; top: 648px; width: 560px; font-size: 16px; font-weight: 600">The event item</div>
+<pre style="position: absolute; left: 64px; top: 680px; width: 560px; box-sizing: border-box; margin: 0; padding: 14px 16px; border-radius: 10px; background: #f6f8fc; border: 1px solid #e6e9ef; font-family: 'Geist Mono', ui-monospace, monospace; font-size: 12.5px; line-height: 1.6; white-space: pre-wrap; color: #0d111b">Item {
+  type: 'event'                 // hidden, like a description
+  parentId: 'passport'          // the task or note it sits in
+  title: null                   // null = the line's own text
+  at: '2026-11-15T10:00+06:00'  // or '2026-11-15' for all day
+  tz: 'Asia/Dhaka'
+  done: false, private: false
+  calendar: { provider: 'google', eventId: '…' }
+}
+// in the document, the chip is only { type: 'date', attrs: { eventId } }</pre>
+
+<div style="position: absolute; left: 672px; top: 648px; width: 544px; font-size: 16px; font-weight: 600">Rules</div>
+<div style="position: absolute; left: 672px; top: 680px; width: 544px; display: flex; flex-direction: column; gap: 9px; font-size: 13.5px; line-height: 1.45; color: #2b3242">
+  <span><b>Which calendar:</b> the space’s choice from Settings › Calendars (the default plus per-space override you already have).</span>
+  <span><b>One way first:</b> Blade Notes writes to the calendar. Moving the event in Google does not move it back yet; two-way sync comes later.</span>
+  <span><b>Private events:</b> “Keep the text out of the calendar” sends only “Blade Notes reminder” and the link.</span>
+  <span><b>Calendar sign-in:</b> Google and Microsoft tokens are stored encrypted with the KMS key; only the calendar worker can read them, with events-only access.</span>
+  <span><b>Offline:</b> chips and the Agenda work without a network; the calendar catches up at the next sync.</span>
+</div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1280,"height":960}}'>
+class Component extends DCLogic {
+  renderVals() { return {}; }
+}
+</script>
+</body>
+</html>

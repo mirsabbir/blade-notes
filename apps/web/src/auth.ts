@@ -1,6 +1,8 @@
 /**
  * Cognito sign-in with the authorization-code flow + PKCE, by hand: no SDK, no client secret.
  * Tokens live in localStorage; the access token is refreshed a minute before it expires.
+ * The `aws.cognito.signin.user.admin` scope lets Settings › Security talk to Cognito for this
+ * user only (two-step sign-in, sign out everywhere).
  */
 interface Config { region: string; clientId: string; authUrl: string }
 interface Tokens { access: string; refresh: string; expiresAt: number }
@@ -31,18 +33,29 @@ export async function signIn(): Promise<void> {
     response_type: 'code',
     client_id: c.clientId,
     redirect_uri: redirectUri(),
-    scope: 'openid email',
+    scope: 'openid email aws.cognito.signin.user.admin',
     code_challenge: challenge,
     code_challenge_method: 'S256',
   })
   location.assign(`${c.authUrl}/oauth2/authorize?${q}`)
 }
 
-export function signOut(): void {
+/** Ends the session here: the refresh token is revoked at Cognito, not just forgotten. */
+export async function signOut(): Promise<void> {
+  const raw = localStorage.getItem(KEY)
   localStorage.removeItem(KEY)
-  if (!config) return location.reload()
-  const q = new URLSearchParams({ client_id: config.clientId, logout_uri: redirectUri() })
-  location.assign(`${config.authUrl}/logout?${q}`)
+  const c = await loadConfig().catch(() => null)
+  if (!c) return location.reload()
+  const refresh = raw ? (JSON.parse(raw) as Tokens).refresh : ''
+  if (refresh) {
+    await fetch(`${c.authUrl}/oauth2/revoke`, {
+      method: 'POST',
+      headers: { 'content-type': 'application/x-www-form-urlencoded' },
+      body: new URLSearchParams({ token: refresh, client_id: c.clientId }),
+    }).catch(() => undefined) // offline: the token still dies at its 30-day end
+  }
+  const q = new URLSearchParams({ client_id: c.clientId, logout_uri: redirectUri() })
+  location.assign(`${c.authUrl}/logout?${q}`)
 }
 
 async function tokenRequest(body: Record<string, string>): Promise<Tokens> {
@@ -100,5 +113,29 @@ export async function accessToken(): Promise<string | null> {
     if (!(err instanceof TokenRejected) || err.status >= 500) throw err
     localStorage.removeItem(KEY)
     return null
+  }
+}
+
+/**
+ * Cognito's user API for the signed-in user (two-step sign-in, sign out everywhere).
+ * Needs the `aws.cognito.signin.user.admin` scope; a session from before it was added
+ * gets "needs a fresh sign-in" and the caller offers one.
+ */
+export async function cognito<T>(action: string, body: Record<string, unknown> = {}): Promise<T> {
+  const c = await loadConfig()
+  const token = await accessToken()
+  if (!token) throw new Error('You are signed out.')
+  const res = await fetch(`https://cognito-idp.${c.region}.amazonaws.com/`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/x-amz-json-1.1', 'x-amz-target': `AWSCognitoIdentityProviderService.${action}` },
+    body: JSON.stringify({ AccessToken: token, ...body }),
+  })
+  const data = (await res.json().catch(() => ({}))) as T & { __type?: string; message?: string }
+  if (!res.ok) throw new CognitoError(data.message ?? `${action} failed (${res.status})`, /scope/i.test(data.message ?? ''))
+  return data
+}
+export class CognitoError extends Error {
+  constructor(message: string, readonly needsSignIn: boolean) {
+    super(message)
   }
 }

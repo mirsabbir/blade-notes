@@ -2,8 +2,10 @@
 /**
  * A `description` is the hidden text behind a list item or a phrase in a note or task:
  * its parentId is that note or task, and it never shows in the blades.
+ * An `event` is a date typed into a note or task with @ (a date chip): its parentId is that
+ * note or task, it never shows in the blades, and the Agenda and calendars read it.
  */
-export type ItemType = 'space' | 'folder' | 'note' | 'task' | 'description'
+export type ItemType = 'space' | 'folder' | 'note' | 'task' | 'description' | 'event'
 
 export type TaskStatus = 'todo' | 'doing' | 'done'
 export type Priority = 'none' | 'low' | 'medium' | 'high'
@@ -19,11 +21,22 @@ export interface Item {
   pinned?: boolean
   /** Spaces only: a CSS colour for the space's dot. */
   color?: string
-  /** Tasks only. */
+  /** Tasks, and events (`todo` or `done`). */
   status?: TaskStatus
   /** Tasks only: ISO date (`2026-11-14`) or date-time with offset. */
   due?: string
   priority?: Priority
+  /**
+   * Events only: when (see when.ts). `2026-11-15` is all day, the same day in every zone;
+   * `2026-11-15T09:00:00+06:00` is one moment, shown in the zone the device is in now.
+   */
+  at?: string
+  /** Events only: IANA zone of the device that set the time, e.g. `Asia/Dhaka`. */
+  tz?: string
+  /** Events only: the calendar gets "Blade Notes reminder" instead of the text. */
+  private?: boolean
+  /** Events only: the title was typed in the chip's popup, so the line's text no longer replaces it. */
+  customTitle?: boolean
   /** Files attached to a task or note. */
   attachments?: Attachment[]
   createdAt: string
@@ -72,7 +85,39 @@ export interface Settings {
   descriptionView: DescriptionView
   /** Hovering described text shows the start of its description. */
   descriptionPreview: boolean
+  /** Secret blocks: the data key, wrapped by the passphrase and by the recovery key. Never the key itself. */
+  vault?: VaultHeader
   updatedAt: string
+}
+
+/**
+ * The vault behind Secret blocks. A random AES-256 data key encrypts every secret in the browser;
+ * here it is stored only wrapped (AES-GCM) by a key derived from the passphrase (PBKDF2-SHA-256)
+ * and, separately, by the one-time recovery key. All values are base64.
+ */
+export interface VaultHeader {
+  v: 1
+  salt: string
+  iterations: number
+  /** 12-byte IV + ciphertext of the data key, under the passphrase key. */
+  wrapped: string
+  /** The same under the recovery key. */
+  recovery: string
+  createdAt: string
+}
+
+/** What `GET /api/calendar` says about each provider. */
+export interface CalendarStatus {
+  provider: CalendarProvider
+  /** The OAuth app for this provider is set up on the server (Apple needs none). */
+  configured: boolean
+  connected: boolean
+  /** The account it is connected to, e.g. an email address. */
+  account?: string
+  /** Last time an event was written, ISO. */
+  lastSyncAt?: string
+  /** Why the last write failed, in words; cleared by the next success. */
+  lastError?: string
 }
 
 export type DescriptionView = 'panel' | 'modal' | 'popover'

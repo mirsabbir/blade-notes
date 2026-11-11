@@ -1,0 +1,712 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<title>Schedule while you write</title>
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Geist:wght@400;500;600;700&amp;family=Geist+Mono:wght@400;500&amp;display=swap" rel="stylesheet">
+<style>
+body{margin:0}
+.app{width:1440px;height:900px;display:flex;overflow:hidden;background:#ffffff;color:#0d111b;font-family:'Geist',system-ui,sans-serif;font-size:14px;-webkit-font-smoothing:antialiased}
+.app button{font:inherit;color:inherit}
+.app kbd{font-family:'Geist Mono',ui-monospace,monospace;font-size:11px;padding:1px 5px;border:1px solid #dee1e8;border-radius:5px;background:#ffffff;color:#555e6f}
+.app code{font-family:'Geist Mono',ui-monospace,monospace;font-size:12.5px;padding:1px 6px;border-radius:6px;background:#eef2f9;color:#14295f}
+.blade{flex:0 0 256px;width:256px;display:flex;flex-direction:column;background:#fbfcfe;border-right:1px solid #dee1e8;min-height:0}
+.agenda{flex:0 0 344px;width:344px}
+.lib-head{height:56px;flex:none;display:flex;align-items:center;gap:10px;padding:0 16px}
+.brand{font-weight:600;font-size:15px}
+.lib-search{margin:0 12px 8px;height:36px;display:flex;align-items:center;gap:8px;padding:0 8px 0 10px;border:1px solid #dee1e8;border-radius:10px;background:#ffffff;color:#555e6f}
+.lib-search span{flex:1}
+.blade-body{flex:1;min-height:0;overflow:auto;padding:4px 8px 12px}
+.section{display:flex;justify-content:space-between;padding:14px 10px 6px;font-size:12px;font-weight:500;color:#555e6f}
+.row{width:100%;min-height:44px;display:flex;align-items:center;gap:10px;padding:6px 10px;border:0;border-radius:8px;background:transparent;text-align:left;cursor:pointer;box-sizing:border-box}
+.row:hover{background:#f1f4fa}
+.row.on{background:#e1ebff;color:#14295f}
+.row.static{cursor:default;min-height:40px}
+.row.static:hover{background:transparent}
+.name{flex:1;min-width:0;font-weight:500}
+.name small{display:block;font-size:11.5px;font-weight:400;color:#555e6f}
+.count{font-size:12px;font-weight:600;min-width:22px;height:20px;padding:0 6px;border-radius:999px;background:#2857e5;color:#f5f8ff;display:inline-flex;align-items:center;justify-content:center;box-sizing:border-box}
+.dot{width:10px;height:10px;border-radius:3px;flex:none}
+.dot.sm{width:7px;height:7px;border-radius:2px;display:inline-block;margin-right:6px}
+.lib-foot{flex:none;display:flex;align-items:center;gap:8px;padding:12px 16px;border-top:1px solid #dee1e8;color:#555e6f;font-size:13px}
+.blade-head{height:56px;flex:none;display:flex;align-items:center;padding:0 16px;border-bottom:1px solid #dee1e8;box-sizing:border-box}
+.blade-head h2{margin:0;font-size:15px;font-weight:600}
+.blade-head p{margin:0;font-size:12px;color:#555e6f}
+.seg{display:flex;margin:12px 16px 4px;padding:3px;background:#eef2f9;border-radius:10px}
+.seg button{flex:1;height:32px;border:0;border-radius:8px;background:transparent;font-size:13px;font-weight:500;color:#555e6f;cursor:pointer}
+.seg button.on{background:#ffffff;color:#0d111b;box-shadow:0 1px 2px rgba(13,17,27,.14)}
+.ag-space{display:flex;align-items:center;gap:8px;padding:16px 8px 4px;font-size:13px;font-weight:600}
+.ag-space .cnt{margin-left:auto;font-size:12px;font-weight:500;color:#555e6f}
+.ag-day{padding:8px 8px 2px 34px;font-size:11.5px;font-weight:600;color:#555e6f}
+.ag-day.top{padding:16px 8px 4px 8px;font-size:12.5px;color:#0d111b}
+.ag-day.late{color:#a4370b}
+.ag-item{display:flex;align-items:center;border-radius:8px}
+.ag-item:hover{background:#f1f4fa}
+.ag-item.cur{background:#e8effc}
+.ag-item.flash{animation:ring .9s ease-out 2}
+.ag-check{flex:none;width:32px;height:44px;display:inline-flex;align-items:center;justify-content:center;border:0;background:transparent;border-radius:8px;cursor:pointer;color:#555e6f}
+.ag-check:hover{color:#2857e5}
+.ok{color:#14874e}
+.ag-open{flex:1;min-width:0;display:flex;align-items:center;gap:8px;padding:6px 8px 6px 2px;border:0;background:transparent;text-align:left;cursor:pointer}
+.ag-text{flex:1;min-width:0;display:flex;flex-direction:column}
+.ag-title{font-size:13.5px;font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.ag-sub{font-size:11.5px;color:#555e6f;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;display:flex;align-items:center}
+.ag-item.done .ag-title{text-decoration:line-through;color:#555e6f}
+.ag-time{flex:none;font-size:12px;font-weight:500;color:#555e6f;font-variant-numeric:tabular-nums}
+.ag-time.late{color:#8f4c08;background:#fdf0e3;padding:1px 7px;border-radius:999px}
+.ag-foot{flex:none;padding:12px 16px;border-top:1px solid #dee1e8;font-size:12px;color:#555e6f;line-height:1.45}
+.editor{flex:1;min-width:0;display:flex;flex-direction:column}
+.editor-head{flex:none;height:56px;display:flex;align-items:center;gap:12px;padding:0 16px 0 24px;border-bottom:1px solid #dee1e8;box-sizing:border-box}
+.crumbs{flex:1;min-width:0;display:flex;align-items:center;gap:4px;color:#555e6f;white-space:nowrap}
+.crumbs .now{font-weight:600;color:#0d111b}
+.saved{display:inline-flex;align-items:center;gap:6px;font-size:12px;color:#14874e}
+.btn{height:32px;display:inline-flex;align-items:center;gap:6px;padding:0 12px;border:1px solid #dee1e8;border-radius:8px;background:#ffffff;font-size:13px;font-weight:500;cursor:pointer;white-space:nowrap}
+.btn:hover{background:#f1f4fa}
+.btn.warn{color:#a4370b}
+.copy-wrap{position:relative}
+.editor-scroll{flex:1;min-height:0;overflow:auto}
+.editor-body{max-width:680px;margin:0 auto;padding:28px 40px 40px}
+.title-row{display:flex;align-items:center;gap:8px}
+.title-row h1{margin:0;font-size:26px;font-weight:650;letter-spacing:-.01em}
+.bigcheck{color:#555e6f;display:inline-flex}
+.fields{display:flex;flex-wrap:wrap;gap:8px;margin:14px 0 0}
+.fpill{display:inline-flex;align-items:center;gap:6px;height:28px;padding:0 10px;border:1px solid #dee1e8;border-radius:999px;font-size:12.5px}
+.fpill b{font-weight:500;color:#555e6f}
+.label{margin:24px 0 12px;padding-top:18px;border-top:1px solid #dee1e8;font-size:13px;font-weight:600;color:#555e6f;display:flex;align-items:center;gap:10px}
+.label .grow{flex:1}
+.tool{height:30px;display:inline-flex;align-items:center;gap:6px;padding:0 8px;border:1px solid #dee1e8;border-radius:8px;background:#ffffff;font-size:12.5px;font-weight:500;color:#0d111b;cursor:pointer}
+.tool:hover{background:#f1f4fa}
+.doc{font-size:15px;line-height:1.6}
+.doc p{margin:0 0 10px}
+.doc ul{margin:0;padding-left:22px}
+.li{position:relative;padding:3px 0}
+.li-done .ln{color:#555e6f}
+.desc-ico{display:inline-flex;vertical-align:-2px;margin-left:6px;color:#2857e5}
+.dchip{display:inline-flex;align-items:center;gap:5px;height:24px;margin-left:6px;padding:0 9px;border:0;border-radius:999px;background:#e1ebff;color:#14295f;font-size:12.5px;font-weight:500;vertical-align:1px;cursor:pointer;white-space:nowrap}
+.dchip:hover,.dchip.open{background:#c9d9ff}
+.dchip.today{background:#fdf0e3;color:#8f4c08}
+.dchip.late{background:#fdf0e3;color:#a4370b}
+.dchip.done{background:#eef2f9;color:#555e6f;text-decoration:line-through}
+.dchip.flash{animation:ring .9s ease-out 2}
+@keyframes ring{0%{box-shadow:0 0 0 0 rgba(40,87,229,.65)}100%{box-shadow:0 0 0 10px rgba(40,87,229,0)}}
+.typing{position:relative;padding:3px 0}
+.line-input{width:100%;border:0;outline:0;background:transparent;font:inherit;font-size:15px;line-height:1.6;color:#0d111b;padding:0}
+.line-input::placeholder{color:#6b7385}
+.try{margin-top:16px;font-size:13px;color:#555e6f;line-height:2}
+.pop{position:absolute;z-index:30;background:#ffffff;border:1px solid #dee1e8;border-radius:12px;box-shadow:0 16px 40px rgba(13,17,27,.16);padding:12px;font-size:13px;line-height:1.4;box-sizing:border-box}
+.chip-pop{left:0;top:calc(100% + 4px);width:600px;display:flex;gap:16px}
+.sug-pop{left:0;top:calc(100% + 4px);width:580px;display:flex;gap:16px}
+.pop.up{top:auto;bottom:calc(100% + 4px)}
+.copy-pop{right:0;top:calc(100% + 8px);width:480px}
+.pop-head{display:flex;align-items:center;justify-content:space-between;gap:8px;padding:0 2px 6px;font-size:12px;font-weight:600;color:#555e6f}
+.x{width:28px;height:28px;border:0;background:transparent;border-radius:6px;display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:#555e6f}
+.x:hover{background:#f1f4fa}
+.col{flex:1;min-width:0;display:flex;flex-direction:column;gap:10px}
+.sug{width:100%;min-height:44px;display:flex;align-items:center;gap:10px;padding:6px 10px;border:0;border-radius:8px;background:transparent;text-align:left;cursor:pointer;box-sizing:border-box}
+.sug:hover{background:#f1f4fa}
+.sug.on{background:#e1ebff;color:#14295f}
+.s-main{flex:1;font-weight:500}
+.s-main small{display:block;font-size:11.5px;font-weight:400;color:#555e6f}
+.s-side{font-size:12px;color:#555e6f;font-variant-numeric:tabular-nums}
+.nosug{margin:4px 2px;color:#555e6f}
+.hint{display:flex;flex-wrap:wrap;align-items:center;gap:6px;margin-top:auto;padding-top:6px;font-size:11.5px;color:#555e6f}
+.cal{flex:none;width:260px}
+.cal-head{display:flex;align-items:center;justify-content:space-between;padding:0 0 6px 4px;font-weight:600}
+.cal-nav{display:flex;gap:2px}
+.wk{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.wk span{text-align:center;font-size:11px;font-weight:500;color:#555e6f;padding:2px 0}
+.grid{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:2px}
+.day{height:32px;border:0;border-radius:8px;background:transparent;font-size:12.5px;cursor:pointer;font-variant-numeric:tabular-nums}
+.day:hover{background:#f1f4fa}
+.day.past{color:#6b7385}
+.day.today{font-weight:700;color:#2857e5}
+.day.sel{background:#2857e5;color:#f5f8ff}
+.fl{display:flex;flex-direction:column;gap:4px;font-size:12px;font-weight:500;color:#555e6f}
+.field{height:32px;border:1px solid #dee1e8;border-radius:8px;background:#ffffff;padding:0 8px;font:inherit;font-size:13px;color:#0d111b;box-sizing:border-box}
+.tr{display:flex;align-items:flex-end;gap:8px}
+.tog{height:32px;padding:0 12px;border:1px solid #dee1e8;border-radius:8px;background:#ffffff;font-size:12.5px;cursor:pointer}
+.tog.on{background:#e1ebff;border-color:#e1ebff;color:#14295f}
+.target{display:flex;align-items:center;gap:8px;padding:8px 10px;border-radius:8px;background:#f1f4fa;font-size:12.5px}
+.ck{display:flex;align-items:flex-start;gap:8px;font-size:12.5px;color:#0d111b;cursor:pointer}
+.ck input{margin:2px 0 0}
+.preview{font-size:12px;color:#555e6f}
+.pop-foot{display:flex;gap:8px;margin-top:auto}
+.copy-pop pre{margin:0;max-height:320px;overflow:auto;padding:10px 12px;border-radius:8px;background:#f6f8fc;border:1px solid #e6e9ef;font-family:'Geist Mono',ui-monospace,monospace;font-size:12px;line-height:1.55;white-space:pre-wrap;color:#0d111b}
+.copy-pop p{margin:8px 2px 0;font-size:12px;color:#555e6f}
+</style>
+</helmet>
+<div class="app">
+
+<section class="blade" aria-label="Library">
+  <div class="lib-head">
+    <svg width="22" height="22" viewBox="0 0 22 22" aria-hidden="true"><rect x="7" y="1" width="14" height="14" rx="3" fill="#22D3C5"></rect><rect x="5" y="3" width="14" height="14" rx="3" fill="#FFBE2E"></rect><rect x="3" y="5" width="14" height="14" rx="3" fill="#FF5E62"></rect><rect x="1" y="7" width="14" height="14" rx="3" fill="#6C4DFF"></rect><rect x="1.5" y="9.5" width="11" height="11" rx="2.5" fill="#ffffff"></rect></svg>
+    <span class="brand">Blade Notes</span>
+  </div>
+  <div class="lib-search">
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="11" cy="11" r="8"></circle><path d="m21 21-4.3-4.3"></path></svg>
+    <span>Search</span>
+    <kbd>⌘K</kbd>
+  </div>
+  <nav class="blade-body" aria-label="Library">
+    <button type="button" class="{{agendaRowClass}}" aria-pressed="{{agendaOpen}}" onClick="{{toggleAgenda}}">
+      <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18M9 16l2 2 4-4"></path></svg>
+      <span class="name">Agenda<small>{{agendaSmall}}</small></span>
+      <span class="count">{{openCount}}</span>
+    </button>
+    <div class="section"><span>Spaces</span><span>3</span></div>
+    <sc-for list="{{spaces}}" as="sp" hint-placeholder-count="3">
+      <div class="row static"><span class="dot" style="background: {{sp.color}}"></span><span class="name">{{sp.name}}<small>{{sp.sub}}</small></span></div>
+    </sc-for>
+  </nav>
+  <div class="lib-foot">
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"></path><path d="m9 12 2 2 4-4"></path></svg>
+    <span>Encrypted · MFA on</span>
+  </div>
+</section>
+
+<sc-if value="{{agendaOpen}}" hint-placeholder-val="{{true}}">
+<section class="blade agenda" aria-label="Agenda">
+  <div class="blade-head">
+    <div><h2>Agenda</h2><p>{{agendaSub}}</p></div>
+  </div>
+  <div class="seg" role="group" aria-label="Group the agenda">
+    <button type="button" class="{{segSpace}}" aria-pressed="{{bySpace}}" onClick="{{groupSpace}}">By space</button>
+    <button type="button" class="{{segDay}}" aria-pressed="{{byDay}}" onClick="{{groupDay}}">By day</button>
+  </div>
+  <div class="blade-body">
+    <sc-for list="{{rows}}" as="r" hint-placeholder-count="10">
+      <sc-if value="{{r.isSpace}}" hint-placeholder-val="{{false}}">
+        <div class="ag-space"><span class="dot" style="background: {{r.color}}"></span><span>{{r.name}}</span><span class="cnt">{{r.count}}</span></div>
+      </sc-if>
+      <sc-if value="{{r.isDay}}" hint-placeholder-val="{{false}}">
+        <div class="{{r.dayClass}}">{{r.label}}</div>
+      </sc-if>
+      <sc-if value="{{r.isItem}}" hint-placeholder-val="{{true}}">
+        <div class="{{r.rowClass}}">
+          <button type="button" class="ag-check" aria-label="{{r.checkLabel}}" onClick="{{r.toggle}}">
+            <sc-if value="{{r.done}}" hint-placeholder-val="{{false}}"><svg class="ok" width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle><path d="m9 12 2 2 4-4"></path></svg></sc-if>
+            <sc-if value="{{r.notDone}}" hint-placeholder-val="{{true}}"><svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle></svg></sc-if>
+          </button>
+          <button type="button" class="ag-open" onClick="{{r.open}}" aria-label="{{r.openLabel}}">
+            <span class="ag-text">
+              <span class="ag-title">{{r.text}}</span>
+              <span class="ag-sub"><sc-if value="{{r.showSpace}}" hint-placeholder-val="{{false}}"><span class="dot sm" style="background: {{r.color}}"></span></sc-if>{{r.sub}}</span>
+            </span>
+            <span class="{{r.timeClass}}">{{r.time}}</span>
+          </button>
+        </div>
+      </sc-if>
+    </sc-for>
+  </div>
+  <div class="ag-foot">Dates you type with @ and task due dates, grouped by space. A row opens its task and the date flashes in the text.</div>
+</section>
+</sc-if>
+
+<main class="editor">
+  <header class="editor-head">
+    <nav class="crumbs" aria-label="Breadcrumb">
+      <span>{{crumbSpace}}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      <span>{{crumbFolder}}</span>
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg>
+      <span class="now">{{taskTitle}}</span>
+    </nav>
+    <span class="saved"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6 9 17l-5-5"></path></svg>Saved</span>
+    <div class="copy-wrap">
+      <button type="button" class="btn" onClick="{{copy}}" aria-expanded="{{copied}}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="14" height="14" x="8" y="8" rx="2"></rect><path d="M4 16c-1.1 0-2-.9-2-2V4c0-1.1.9-2 2-2h10c1.1 0 2 .9 2 2"></path></svg>
+        Copy
+      </button>
+      <sc-if value="{{copied}}" hint-placeholder-val="{{false}}">
+        <div class="pop copy-pop" role="status">
+          <div class="pop-head"><span>Copied: rich text and Markdown</span><button type="button" class="x" aria-label="Close" onClick="{{closeCopy}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></div>
+          <pre>{{md}}</pre>
+          <p>Gmail or Docs get the formatted version, plain text boxes get this Markdown. Dates are written out, hidden descriptions come along as quotes.</p>
+        </div>
+      </sc-if>
+    </div>
+  </header>
+
+  <div class="editor-scroll">
+    <div class="editor-body">
+      <div class="title-row">
+        <span class="bigcheck"><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" aria-hidden="true"><circle cx="12" cy="12" r="10"></circle></svg></span>
+        <h1>{{taskTitle}}</h1>
+      </div>
+      <div class="fields">
+        <span class="fpill"><b>Status</b> {{taskStatus}}</span>
+        <span class="fpill"><b>Due</b> {{taskDue}}</span>
+        <span class="fpill"><b>Priority</b> {{taskPriority}}</span>
+      </div>
+      <div class="label">
+        <span>Description</span>
+        <span class="grow"></span>
+        <button type="button" class="tool" onClick="{{insertAt}}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+          Schedule <kbd>@</kbd>
+        </button>
+      </div>
+      <div class="doc">
+        <p>{{taskIntro}}</p>
+        <ul>
+          <sc-for list="{{lines}}" as="l" hint-placeholder-count="3">
+            <li class="{{l.liClass}}">
+              <span class="ln">{{l.text}}</span>
+              <sc-if value="{{l.hasDesc}}" hint-placeholder-val="{{false}}"><span class="desc-ico" title="Has a hidden description"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h10"></path></svg></span></sc-if>
+              <sc-if value="{{l.hasChip}}" hint-placeholder-val="{{false}}">
+                <button type="button" class="{{l.chipClass}}" aria-expanded="{{l.isOpen}}" aria-label="{{l.chipAria}}" onClick="{{l.chipClick}}">
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+                  {{l.chipLabel}}
+                </button>
+              </sc-if>
+              <sc-if value="{{l.isOpen}}" hint-placeholder-val="{{false}}">
+                <div class="{{l.popClass}}" role="dialog" aria-label="Date for this line">
+                  <div class="cal">
+                    <div class="cal-head">
+                      <span>{{cal.title}}</span>
+                      <span class="cal-nav">
+                        <button type="button" class="x" aria-label="Previous month" onClick="{{cal.prev}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+                        <button type="button" class="x" aria-label="Next month" onClick="{{cal.next}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+                      </span>
+                    </div>
+                    <div class="wk" aria-hidden="true"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+                    <div class="grid">
+                      <sc-for list="{{cal.cells}}" as="c" hint-placeholder-count="30">
+                        <sc-if value="{{c.blank}}" hint-placeholder-val="{{false}}"><span></span></sc-if>
+                        <sc-if value="{{c.real}}" hint-placeholder-val="{{true}}"><button type="button" class="{{c.cls}}" aria-label="{{c.aria}}" onClick="{{c.pick}}">{{c.label}}</button></sc-if>
+                      </sc-for>
+                    </div>
+                  </div>
+                  <div class="col">
+                    <div class="pop-head"><span>{{pop.when}}</span><button type="button" class="x" aria-label="Close" onClick="{{closePop}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="M18 6 6 18M6 6l12 12"></path></svg></button></div>
+                    <label class="fl">Title in the calendar<input class="field" value="{{pop.title}}" onChange="{{pop.onTitle}}"></label>
+                    <div class="tr">
+                      <label class="fl">Time<input type="time" class="field" value="{{pop.time}}" onChange="{{pop.onTime}}"></label>
+                      <button type="button" class="{{pop.allDayClass}}" aria-pressed="{{pop.allDay}}" onClick="{{pop.toggleAllDay}}">All day</button>
+                    </div>
+                    <div class="target">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect width="18" height="18" x="3" y="4" rx="2"></rect><path d="M16 2v4M8 2v4M3 10h18"></path></svg>
+                      <span>{{pop.target}}</span>
+                    </div>
+                    <label class="ck"><input type="checkbox" checked="{{pop.hidden}}" onChange="{{pop.toggleHidden}}"><span>Keep the text out of the calendar<br><span class="preview">{{pop.preview}}</span></span></label>
+                    <div class="pop-foot">
+                      <button type="button" class="btn" onClick="{{pop.toggleDone}}">{{pop.doneLabel}}</button>
+                      <button type="button" class="btn warn" onClick="{{pop.remove}}">Remove date</button>
+                    </div>
+                  </div>
+                </div>
+              </sc-if>
+            </li>
+          </sc-for>
+          <li class="typing">
+            <input class="line-input" value="{{draft}}" onChange="{{onDraft}}" onKeyDown="{{onKey}}" placeholder="Write a step, then @ and a day" aria-label="New line. Type @ at the start of a word to schedule it">
+            <sc-if value="{{showSug}}" hint-placeholder-val="{{false}}">
+              <div class="{{sugClass}}" role="dialog" aria-label="Pick a date">
+                <div class="col">
+                  <div class="pop-head"><span>{{sugHead}}</span></div>
+                  <sc-for list="{{sugs}}" as="s" hint-placeholder-count="4">
+                    <button type="button" class="{{s.cls}}" aria-pressed="{{s.on}}" onClick="{{s.pick}}"><span class="s-main">{{s.main}}<small>{{s.label}}</small></span><span class="s-side">{{s.side}}</span></button>
+                  </sc-for>
+                  <sc-if value="{{noSug}}" hint-placeholder-val="{{false}}"><p class="nosug">No date in “{{query}}” yet. Keep typing, pick a day, or press Esc to keep it as text.</p></sc-if>
+                  <div class="hint"><kbd>↑</kbd><kbd>↓</kbd> choose <kbd>Enter</kbd> insert <kbd>Esc</kbd> keep as text</div>
+                </div>
+                <div class="cal">
+                  <div class="cal-head">
+                    <span>{{cal.title}}</span>
+                    <span class="cal-nav">
+                      <button type="button" class="x" aria-label="Previous month" onClick="{{cal.prev}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m15 18-6-6 6-6"></path></svg></button>
+                      <button type="button" class="x" aria-label="Next month" onClick="{{cal.next}}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><path d="m9 18 6-6-6-6"></path></svg></button>
+                    </span>
+                  </div>
+                  <div class="wk" aria-hidden="true"><span>M</span><span>T</span><span>W</span><span>T</span><span>F</span><span>S</span><span>S</span></div>
+                  <div class="grid">
+                    <sc-for list="{{cal.cells}}" as="c" hint-placeholder-count="30">
+                      <sc-if value="{{c.blank}}" hint-placeholder-val="{{false}}"><span></span></sc-if>
+                      <sc-if value="{{c.real}}" hint-placeholder-val="{{true}}"><button type="button" class="{{c.cls}}" aria-label="{{c.aria}}" onClick="{{c.pick}}">{{c.label}}</button></sc-if>
+                    </sc-for>
+                  </div>
+                </div>
+              </div>
+            </sc-if>
+          </li>
+        </ul>
+        <p class="try">Try at the end of the last line: <code>@sun 3pm</code> <code>@tom</code> <code>@next fri</code> <code>@15 nov</code> <code>@in 3 days</code>. Type <code>mir@gmail.com</code> and nothing opens: the @ is inside a word.</p>
+      </div>
+    </div>
+  </div>
+</main>
+
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script data-props='{"$preview":{"width":1440,"height":900}}'>
+class Component extends DCLogic {
+  constructor(props) {
+    super(props);
+    const ev = (task, date, time) => ({ task, date, time, done: false, hidden: false, title: null });
+    const tasks = {
+      passport: { space: 'personal', folder: 'Documents', title: 'Passport & visa', status: 'Doing', due: 'Fri 20 Nov', priority: 'High',
+        intro: 'The passport runs out in March, and the embassy wants the new one before the visa interview.',
+        lines: [
+          { text: 'Collect the old passport and two photos', desc: 'Photos 35 × 45 mm, white background, no glasses.' },
+          { text: 'Book the renewal appointment', ev: 'e1' },
+          { text: 'Ask the office for the NOC letter', ev: 'e2' }
+        ] },
+      bank: { space: 'personal', folder: 'Money', title: 'Card and bank', status: 'To do', due: 'Thu 12 Nov', priority: 'Medium',
+        intro: 'The card was blocked after the trip; the bill is still due.',
+        lines: [ { text: 'Pay the credit card bill', ev: 'e3' }, { text: 'Call the bank about the blocked card', ev: 'e4' } ] },
+      roadmap: { space: 'work', folder: 'Planning', title: 'Q4 roadmap', status: 'Doing', due: 'Fri 13 Nov', priority: 'High',
+        intro: 'The first draft is done. It needs one review round before the demo.',
+        lines: [ { text: 'Send the draft to the team', ev: 'e5' }, { text: 'Prepare the Friday demo', ev: 'e6' } ] },
+      flat: { space: 'home', folder: 'Flat', title: 'Flat repairs', status: 'To do', due: 'No date', priority: 'Low',
+        intro: 'Small things before the guests arrive.',
+        lines: [ { text: 'Buy filters for the AC', ev: 'e7' }, { text: 'Plumber for the kitchen tap', ev: 'e8' } ] }
+    };
+    Object.keys(tasks).forEach((id) => { tasks[id].id = id; });
+    this.state = {
+      sel: 'passport', group: 'space', agenda: true,
+      draft: 'Pay the visa fee online ', hi: 0, dismissedAt: -1,
+      open: null, flash: null, copied: false, cal: 0, n: 1,
+      tasks,
+      events: {
+        e1: ev('passport', '2026-11-15', '10:00'),
+        e2: ev('passport', '2026-11-19', null),
+        e3: ev('bank', '2026-11-10', null),
+        e4: ev('bank', '2026-11-11', '16:00'),
+        e5: ev('roadmap', '2026-11-12', '09:30'),
+        e6: ev('roadmap', '2026-11-13', '15:00'),
+        e7: ev('flat', '2026-11-14', null),
+        e8: ev('flat', '2026-11-17', '11:00')
+      }
+    };
+  }
+
+  componentWillUnmount() { clearTimeout(this._ft); }
+
+  k() {
+    if (!this._k) {
+      this._k = {
+        DAY: 86400000, TODAY: Date.UTC(2026, 10, 11),
+        WD: ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'],
+        WDF: ['sunday', 'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday'],
+        MO: ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'],
+        MOF: ['january', 'february', 'march', 'april', 'may', 'june', 'july', 'august', 'september', 'october', 'november', 'december'],
+        SPACES: [
+          { id: 'personal', name: 'Personal', color: '#6C4DFF', cal: 'Google Calendar', calName: 'Google Calendar · Personal' },
+          { id: 'work', name: 'Work', color: '#2857e5', cal: 'Outlook', calName: 'Outlook · Work' },
+          { id: 'home', name: 'Home', color: '#FF5E62', cal: 'Apple Calendar', calName: 'iCloud · Home' }
+        ]
+      };
+    }
+    return this._k;
+  }
+
+  cap(s) { return s.charAt(0).toUpperCase() + s.slice(1); }
+  pad(n) { return (n < 10 ? '0' : '') + n; }
+  ms(s) { const p = s.split('-'); return Date.UTC(+p[0], +p[1] - 1, +p[2]); }
+  iso(t) { return new Date(t).toISOString().slice(0, 10); }
+  fmt(s) { const k = this.k(); const d = new Date(this.ms(s)); return k.WD[d.getUTCDay()] + ' ' + d.getUTCDate() + ' ' + k.MO[d.getUTCMonth()]; }
+  fmtLong(s) { const k = this.k(); const d = new Date(this.ms(s)); return this.cap(k.WDF[d.getUTCDay()]) + ', ' + d.getUTCDate() + ' ' + k.MO[d.getUTCMonth()]; }
+  fmtYear(s) { return this.fmt(s) + ' ' + new Date(this.ms(s)).getUTCFullYear(); }
+  diff(s) { const k = this.k(); return Math.round((this.ms(s) - k.TODAY) / k.DAY); }
+  space(id) { return this.k().SPACES.find((x) => x.id === id); }
+  nextDow(i) { const k = this.k(); const now = new Date(k.TODAY).getUTCDay(); return k.TODAY + ((i - now + 7) % 7) * k.DAY; }
+  chipText(e) { const d = this.diff(e.date); const day = d === 0 ? 'Today' : d === 1 ? 'Tomorrow' : this.fmt(e.date); return e.time ? day + ' · ' + e.time : day; }
+  lineOf(id) {
+    const ts = this.state.tasks;
+    for (const key of Object.keys(ts)) for (const l of ts[key].lines) if (l.ev === id) return l;
+    return null;
+  }
+  titleOf(id) { const e = this.state.events[id]; const l = this.lineOf(id); return e && e.title != null ? e.title : l ? l.text : ''; }
+
+  setEvent(id, patch) { this.setState((s) => ({ events: Object.assign({}, s.events, { [id]: Object.assign({}, s.events[id], patch) }) })); }
+  flashTo(id) {
+    this.setState({ flash: id });
+    clearTimeout(this._ft);
+    this._ft = setTimeout(() => this.setState({ flash: null }), 1900);
+  }
+  removeEv(id) {
+    this.setState((s) => {
+      const events = Object.assign({}, s.events); delete events[id];
+      const tasks = {};
+      Object.keys(s.tasks).forEach((key) => {
+        const t = s.tasks[key];
+        tasks[key] = Object.assign({}, t, { lines: t.lines.map((l) => (l.ev === id ? { text: l.text, desc: l.desc } : l)) });
+      });
+      return { events, tasks, open: null };
+    });
+  }
+  monthOffset(s) { const d = new Date(this.ms(s)); return d.getUTCFullYear() * 12 + d.getUTCMonth() - (2026 * 12 + 10); }
+
+  token(v) {
+    const i = v.lastIndexOf('@');
+    if (i < 0) return null;
+    if (i > 0 && !/\s/.test(v.charAt(i - 1))) return null;
+    const q = v.slice(i + 1);
+    if (q.length > 24) return null;
+    return { idx: i, q };
+  }
+  mon(s) { return s.length >= 3 ? this.k().MOF.findIndex((m) => m.startsWith(s)) : -1; }
+  dm(d, mi) {
+    if (mi == null || mi < 0 || mi > 11 || d < 1 || d > 31) return null;
+    let t = Date.UTC(2026, mi, d);
+    if (new Date(t).getUTCDate() !== d) return null;
+    if (t < this.k().TODAY) t = Date.UTC(2027, mi, d);
+    return t;
+  }
+  suggest(q) {
+    const k = this.k(), T = k.TODAY, D = k.DAY;
+    let rest = q.trim().toLowerCase(), time = null;
+    const m = rest.match(/(?:^|\s)(?:at\s*)?(\d{1,2})(?::(\d{2}))?\s*(am|pm)$/) || rest.match(/(?:^|\s)(?:at\s*)?(\d{1,2}):(\d{2})$/);
+    if (m) {
+      let h = +m[1]; const mi = +(m[2] || 0); const ap = m[3];
+      if (ap === 'pm' && h < 12) h += 12;
+      if (ap === 'am' && h === 12) h = 0;
+      if (h < 24 && mi < 60) { time = this.pad(h) + ':' + this.pad(mi); rest = rest.slice(0, m.index).trim(); }
+    }
+    const out = [];
+    const add = (t, label) => { if (t != null && !out.some((o) => o[0] === t)) out.push([t, label]); };
+    const wd = (w) => (w && w.length >= 2 ? k.WDF.findIndex((d) => d.startsWith(w)) : -1);
+    if (!rest) {
+      add(T, 'Today');
+      if (!time) { add(T + D, 'Tomorrow'); add(this.nextDow(6), 'This weekend'); add(this.nextDow(1), 'Next week'); }
+    } else {
+      if (rest.length >= 2 && 'today'.startsWith(rest)) add(T, 'Today');
+      if ((rest.length >= 2 && 'tomorrow'.startsWith(rest)) || rest === 'tmr' || rest === 'tmrw') add(T + D, 'Tomorrow');
+      let x = rest.match(/^next\s*([a-z]*)$/);
+      if (x) {
+        const i = wd(x[1]);
+        if (i >= 0) add(this.nextDow(i) + 7 * D, 'Next ' + this.cap(k.WDF[i]));
+        if (!x[1] || 'week'.startsWith(x[1])) add(this.nextDow(1), 'Next week');
+      } else {
+        const i = wd(rest);
+        if (i >= 0) add(this.nextDow(i), i === new Date(T).getUTCDay() ? 'Today' : 'This ' + this.cap(k.WDF[i]));
+      }
+      if (rest.length >= 2 && 'weekend'.startsWith(rest)) add(this.nextDow(6), 'This weekend');
+      x = rest.match(/^in\s*(\d{1,3})\s*(d|days?|w|weeks?)?$/);
+      if (x) { const w = !!x[2] && x[2].charAt(0) === 'w'; const n = +x[1]; add(T + n * (w ? 7 : 1) * D, 'In ' + n + (w ? (n === 1 ? ' week' : ' weeks') : (n === 1 ? ' day' : ' days'))); }
+      x = rest.match(/^(\d{1,2})(?:st|nd|rd|th)?\s*([a-z]{3,})$/);
+      if (x) add(this.dm(+x[1], this.mon(x[2])), '');
+      x = rest.match(/^([a-z]{3,})\s*(\d{1,2})$/);
+      if (x) add(this.dm(+x[2], this.mon(x[1])), '');
+      x = rest.match(/^(\d{1,2})[\/.](\d{1,2})$/);
+      if (x) add(this.dm(+x[1], +x[2] - 1), '');
+      x = rest.match(/^(\d{1,2})$/);
+      if (x) { const d = +x[1]; let t = this.dm(d, 10); if (t != null && t > Date.UTC(2027, 0, 1)) t = this.dm(d, 11); add(t, ''); }
+    }
+    return out.slice(0, 5).map((o) => ({ date: this.iso(o[0]), time, label: o[1] }));
+  }
+
+  commit(date, time) {
+    const s = this.state; const tok = this.token(s.draft);
+    const text = (tok ? s.draft.slice(0, tok.idx) : s.draft).trim() || 'New step';
+    const id = 'n' + s.n; const t = s.tasks[s.sel];
+    this.setState({
+      events: Object.assign({}, s.events, { [id]: { task: s.sel, date, time: time || null, done: false, hidden: false, title: null } }),
+      tasks: Object.assign({}, s.tasks, { [s.sel]: Object.assign({}, t, { lines: t.lines.concat([{ text, ev: id }]) }) }),
+      draft: '', hi: 0, dismissedAt: -1, n: s.n + 1, open: null, cal: 0
+    });
+    this.flashTo(id);
+  }
+
+  calendar(selected, pick) {
+    const k = this.k();
+    const first = new Date(Date.UTC(2026, 10 + this.state.cal, 1));
+    const year = first.getUTCFullYear(), month = first.getUTCMonth();
+    const days = new Date(Date.UTC(year, month + 1, 0)).getUTCDate();
+    const lead = (first.getUTCDay() + 6) % 7;
+    const cells = [];
+    for (let i = 0; i < lead; i++) cells.push({ blank: true, real: false });
+    for (let d = 1; d <= days; d++) {
+      const t = Date.UTC(year, month, d); const iso = this.iso(t);
+      const cls = 'day' + (t < k.TODAY ? ' past' : '') + (t === k.TODAY ? ' today' : '') + (iso === selected ? ' sel' : '');
+      cells.push({ blank: false, real: true, label: String(d), cls, aria: this.fmtYear(iso), pick: () => pick(iso) });
+    }
+    return {
+      title: this.cap(k.MOF[month]) + ' ' + year, cells,
+      prev: () => this.setState({ cal: this.state.cal - 1 }),
+      next: () => this.setState({ cal: this.state.cal + 1 })
+    };
+  }
+
+  agendaRows() {
+    const s = this.state, k = this.k();
+    const list = Object.keys(s.events).map((id) => {
+      const e = s.events[id]; const t = s.tasks[e.task];
+      return Object.assign({ id }, e, { t, sp: this.space(t.space) });
+    }).sort((a, b) => (a.date + (a.time || '')).localeCompare(b.date + (b.time || '')));
+    const item = (e, showSpace) => {
+      const d = this.diff(e.date);
+      return {
+        isItem: true, isSpace: false, isDay: false,
+        text: this.titleOf(e.id),
+        sub: (showSpace ? e.sp.name + ' · ' : '') + 'in ' + e.t.title,
+        showSpace, color: e.sp.color, done: e.done, notDone: !e.done,
+        time: d < 0 && !e.done ? this.fmt(e.date) : e.time || 'All day',
+        timeClass: d < 0 && !e.done ? 'ag-time late' : 'ag-time',
+        rowClass: 'ag-item' + (s.sel === e.task ? ' cur' : '') + (s.flash === e.id ? ' flash' : '') + (e.done ? ' done' : ''),
+        checkLabel: e.done ? 'Mark “' + this.titleOf(e.id) + '” not done' : 'Mark “' + this.titleOf(e.id) + '” done',
+        openLabel: 'Open ' + e.t.title + ': ' + this.titleOf(e.id),
+        toggle: () => this.setEvent(e.id, { done: !e.done }),
+        open: () => { this.setState({ sel: e.task, open: null, copied: false, draft: s.sel === e.task ? s.draft : '', dismissedAt: -1 }); this.flashTo(e.id); }
+      };
+    };
+    const dayLabel = (date, long) => {
+      const d = this.diff(date);
+      if (d < 0) return 'Overdue';
+      if (d === 0) return long ? 'Today · ' + this.fmt(date) : 'Today';
+      if (d === 1) return long ? 'Tomorrow · ' + this.fmt(date) : 'Tomorrow';
+      return long ? this.fmtLong(date) : this.fmt(date);
+    };
+    const rows = [];
+    if (s.group === 'space') {
+      k.SPACES.forEach((sp) => {
+        const mine = list.filter((e) => e.sp.id === sp.id);
+        if (!mine.length) return;
+        rows.push({ isSpace: true, isDay: false, isItem: false, name: sp.name, color: sp.color, count: mine.filter((e) => !e.done).length + ' open' });
+        let last = null;
+        mine.forEach((e) => {
+          const label = dayLabel(e.date, false);
+          if (label !== last) { rows.push({ isDay: true, isSpace: false, isItem: false, label, dayClass: 'ag-day' + (label === 'Overdue' ? ' late' : '') }); last = label; }
+          rows.push(item(e, false));
+        });
+      });
+    } else {
+      let last = null;
+      list.forEach((e) => {
+        const label = dayLabel(e.date, true);
+        if (label !== last) { rows.push({ isDay: true, isSpace: false, isItem: false, label, dayClass: 'ag-day top' + (label === 'Overdue' ? ' late' : '') }); last = label; }
+        rows.push(item(e, true));
+      });
+    }
+    return rows;
+  }
+
+  markdown(t) {
+    const s = this.state, sp = this.space(t.space);
+    const out = ['# ' + t.title, sp.name + ' › ' + t.folder + '  ·  Status: ' + t.status + '  ·  Due: ' + t.due + '  ·  Priority: ' + t.priority, '', t.intro, ''];
+    t.lines.forEach((l) => {
+      const e = l.ev ? s.events[l.ev] : null;
+      let line = '- ' + (e && e.done ? '~~' + l.text + '~~' : l.text);
+      if (e) line += ' — ' + this.fmtYear(e.date) + (e.time ? ', ' + e.time : '');
+      out.push(line);
+      if (l.desc) out.push('  > ' + l.desc);
+    });
+    return out.join('\n');
+  }
+
+  renderVals() {
+    const s = this.state, k = this.k();
+    const t = s.tasks[s.sel];
+    const sp = this.space(t.space);
+    const tok = this.token(s.draft);
+    const showSug = !!tok && tok.idx !== s.dismissedAt && !s.open;
+    const raw = showSug ? this.suggest(tok.q) : [];
+    const hi = Math.min(s.hi, Math.max(raw.length - 1, 0));
+    const sugs = raw.map((x, i) => ({
+      cls: 'sug' + (i === hi ? ' on' : ''), on: i === hi,
+      main: this.fmtLong(x.date), label: x.label, side: x.time || 'All day',
+      pick: () => this.commit(x.date, x.time)
+    }));
+    const openEv = s.open ? s.events[s.open] : null;
+    let cal = { title: '', cells: [], prev: () => {}, next: () => {} };
+    if (openEv) cal = this.calendar(openEv.date, (iso) => this.setEvent(s.open, { date: iso }));
+    else if (showSug) cal = this.calendar(raw[hi] ? raw[hi].date : null, (iso) => this.commit(iso, raw[hi] ? raw[hi].time : null));
+
+    const lines = t.lines.map((l, i) => {
+      const e = l.ev ? s.events[l.ev] : null;
+      const d = e ? this.diff(e.date) : 0;
+      const tone = !e ? '' : e.done ? ' done' : d < 0 ? ' late' : d === 0 ? ' today' : '';
+      return {
+        text: l.text, hasDesc: !!l.desc, hasChip: !!e,
+        liClass: 'li' + (e && e.done ? ' li-done' : ''),
+        chipClass: 'dchip' + tone + (s.flash === l.ev ? ' flash' : '') + (s.open === l.ev ? ' open' : ''),
+        chipLabel: e ? this.chipText(e) : '',
+        chipAria: e ? 'Scheduled ' + this.fmtYear(e.date) + (e.time ? ' at ' + e.time : ', all day') + '. Change the date' : '',
+        isOpen: !!e && s.open === l.ev,
+        popClass: 'pop chip-pop' + (i >= 6 ? ' up' : ''),
+        chipClick: () => {
+          if (s.open === l.ev) return this.setState({ open: null });
+          this.setState({ open: l.ev, cal: this.monthOffset(e.date), copied: false, dismissedAt: tok ? tok.idx : -1 });
+        }
+      };
+    });
+
+    let pop = {};
+    if (openEv) {
+      const id = s.open; const title = this.titleOf(id);
+      const evSpace = this.space(s.tasks[openEv.task].space);
+      pop = {
+        when: this.fmtYear(openEv.date) + (openEv.time ? ', ' + openEv.time : ', all day'),
+        title, onTitle: (e) => this.setEvent(id, { title: e.target.value }),
+        time: openEv.time || '', onTime: (e) => this.setEvent(id, { time: e.target.value || null }),
+        allDay: !openEv.time, allDayClass: 'tog' + (!openEv.time ? ' on' : ''),
+        toggleAllDay: () => this.setEvent(id, { time: openEv.time ? null : '09:00' }),
+        target: 'Goes to ' + evSpace.calName + ' (this space’s calendar)',
+        hidden: !!openEv.hidden, toggleHidden: () => this.setEvent(id, { hidden: !openEv.hidden }),
+        preview: evSpace.cal + ' shows: “' + (openEv.hidden ? 'Blade Notes reminder' : title) + '”',
+        doneLabel: openEv.done ? 'Mark not done' : 'Mark done',
+        toggleDone: () => this.setEvent(id, { done: !openEv.done }),
+        remove: () => this.removeEv(id)
+      };
+    }
+
+    const all = Object.keys(s.events).map((id) => s.events[id]);
+    const open = all.filter((e) => !e.done);
+    const dueNow = open.filter((e) => this.diff(e.date) <= 0).length;
+    const md = this.markdown(t);
+    const before = tok ? s.draft.slice(0, tok.idx).trim() : '';
+
+    return {
+      agendaOpen: s.agenda,
+      agendaRowClass: 'row' + (s.agenda ? ' on' : ''),
+      toggleAgenda: () => this.setState({ agenda: !s.agenda }),
+      agendaSmall: dueNow + ' today or late',
+      openCount: open.length,
+      spaces: k.SPACES.map((x) => ({ name: x.name, color: x.color, sub: x.calName })),
+      agendaSub: open.length + ' open · today is ' + this.fmt(this.iso(k.TODAY)),
+      bySpace: s.group === 'space', byDay: s.group === 'day',
+      segSpace: s.group === 'space' ? 'on' : '', segDay: s.group === 'day' ? 'on' : '',
+      groupSpace: () => this.setState({ group: 'space' }),
+      groupDay: () => this.setState({ group: 'day' }),
+      rows: this.agendaRows(),
+      crumbSpace: sp.name, crumbFolder: t.folder,
+      taskTitle: t.title, taskStatus: t.status, taskDue: t.due, taskPriority: t.priority, taskIntro: t.intro,
+      copied: s.copied, md,
+      copy: () => {
+        this.setState({ copied: !s.copied, open: null });
+        try { if (navigator.clipboard) navigator.clipboard.writeText(md).catch(() => {}); } catch (err) { /* sandbox may block the clipboard */ }
+      },
+      closeCopy: () => this.setState({ copied: false }),
+      insertAt: () => {
+        const base = s.draft.replace(/\s+$/, '');
+        this.setState({ draft: (base ? base + ' ' : '') + '@', hi: 0, dismissedAt: -1, open: null });
+      },
+      lines, cal, pop,
+      closePop: () => this.setState({ open: null }),
+      draft: s.draft,
+      onDraft: (e) => {
+        const v = e.target.value; const nt = this.token(v);
+        this.setState({ draft: v, hi: 0, dismissedAt: nt && nt.idx === s.dismissedAt ? s.dismissedAt : -1 });
+      },
+      onKey: (e) => {
+        if (!showSug) return;
+        if (e.key === 'ArrowDown') { e.preventDefault(); this.setState({ hi: Math.min(hi + 1, raw.length - 1) }); }
+        else if (e.key === 'ArrowUp') { e.preventDefault(); this.setState({ hi: Math.max(hi - 1, 0) }); }
+        else if (e.key === 'Enter') { e.preventDefault(); if (raw[hi]) this.commit(raw[hi].date, raw[hi].time); }
+        else if (e.key === 'Escape') { e.preventDefault(); this.setState({ dismissedAt: tok.idx }); }
+      },
+      showSug, sugs, noSug: showSug && raw.length === 0, query: tok ? tok.q.trim() : '',
+      sugHead: before ? 'Schedule “' + (before.length > 40 ? before.slice(0, 40) + '…' : before) + '”' : 'Schedule this line',
+      sugClass: 'pop sug-pop' + (t.lines.length >= 6 ? ' up' : '')
+    };
+  }
+}
+</script>
+</body>
+</html>
