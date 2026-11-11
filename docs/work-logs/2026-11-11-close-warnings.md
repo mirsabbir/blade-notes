@@ -1,7 +1,7 @@
 ---
 type: work-log
 date: 2026-11-11
-status: "Web live. Desktop apps: code in main, ships with the next desktop release (tag v*)."
+status: "Live on the web and in the desktop apps (v0.1.0)."
 title: "Warn before closing mid-upload; save the last keystrokes on close"
 tags: [sync, uploads, desktop, beforeunload]
 ---
@@ -29,4 +29,4 @@ Warn only when something would really be lost, never for changes merely waiting 
 
 ## Open
 
-- Desktop apps get this with the next release tag.
+Nothing.

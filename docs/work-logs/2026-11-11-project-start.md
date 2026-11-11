@@ -1,7 +1,7 @@
 ---
 type: work-log
 date: 2026-11-11
-status: "Live. Web app, sync API, AWS stack, desktop apps for macOS and Windows; v0.1.0 tag not pushed yet."
+status: "Live. Web app, sync API, AWS stack; desktop apps released as v0.1.0 the same evening."
 title: "Blade Notes: first day, from nothing to a live app"
 tags: [history, web, sync, cdk, desktop, descriptions, attachments]
 ---
@@ -29,7 +29,7 @@ tags: [history, web, sync, cdk, desktop, descriptions, attachments]
 
 ## Open
 
-- Push the first desktop release tag (`v0.1.0`).
+- ~~Push the first desktop release tag~~: done, [2026-11-11-desktop-release-v0.1.0.md](2026-11-11-desktop-release-v0.1.0.md).
 - Mobile (Expo) and AI features, later.
 
 Architecture: [01-data-and-sync.md](../architecture/01-data-and-sync.md).
