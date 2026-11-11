@@ -1,7 +1,7 @@
 ---
 type: work-log
 date: 2026-11-11
-status: "Live and checked. Owner: confirm the alert email, turn on two-step sign-in, create the vault."
+status: "Live and checked; alert email confirmed 2026-11-12. Owner: turn on two-step sign-in, create the vault."
 title: "Security: KMS key at rest, headers and CSP, signed-in files, two-step sign-in, alerts, Secret blocks"
 tags: [security, kms, csp, hsts, mfa, cognito, cloudtrail, secret-blocks]
 ---
@@ -52,5 +52,6 @@ Commit `53c69bb` and follow-ups; deployed with no replaced resources. Details: [
 
 ## Open
 
-- Owner: confirm the "AWS Notification - Subscription Confirmation" email; set up two-step sign-in and the vault in Settings › Security.
+- ~~Confirm the alert email~~: confirmed 2026-11-12 (the first confirmation had not registered; resent).
+- Owner: set up two-step sign-in and the vault in Settings › Security.
 - Older versions of the 4 pre-switch files remain under the S3 key; delete them if version history is not needed.
