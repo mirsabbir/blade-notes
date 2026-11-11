@@ -55,7 +55,7 @@ const mark = (p: string[], key: string) => (p.includes(key) ? p : [...p, key])
 
 export function childrenOf(items: State['items'], parentId: string | null): Item[] {
   return Object.values(items)
-    .filter((i) => i.parentId === parentId && !i.deletedAt)
+    .filter((i) => i.parentId === parentId && !i.deletedAt && i.type !== 'description')
     .sort((a, b) => (a.rank < b.rank ? -1 : a.rank > b.rank ? 1 : 0))
 }
 
@@ -83,6 +83,22 @@ export function create(type: Item['type'], parentId: string | null, title: strin
   commit({ ...state, items: { ...state.items, [item.id]: item }, pending: mark(state.pending, `item:${item.id}`) })
   scheduleSync()
   return item
+}
+
+/** A hidden description for a list item or a phrase inside `ownerId` (a note or task). */
+export function createDescription(ownerId: string, title: string): string {
+  const t = now()
+  const item: Item = { id: newId(), type: 'description', parentId: ownerId, rank: 'a0', title: title.slice(0, 120) || 'Description', createdAt: t, updatedAt: t }
+  commit({ ...state, items: { ...state.items, [item.id]: item }, pending: mark(state.pending, `item:${item.id}`) })
+  scheduleSync()
+  return item.id
+}
+
+/** Plain text of a Tiptap document, for search and previews. */
+export function docText(doc: unknown): string {
+  if (!doc || typeof doc !== 'object') return ''
+  const d = doc as { text?: string; content?: unknown[] }
+  return ((d.text ?? '') + ' ' + (d.content ?? []).map(docText).join(' ')).replace(/\s+/g, ' ').trim()
 }
 
 export function update(id: string, patch: Partial<Item>): void {

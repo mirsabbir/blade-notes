@@ -1,0 +1,57 @@
+# Builds the macOS (Apple Silicon) DMG and the Windows x64 zip.
+# Runs on every push that touches the desktop apps (binaries kept as run artifacts for 14 days),
+# by hand from the Actions tab, and from release.yml when a v* tag is pushed.
+name: Desktop builds
+
+on:
+  push:
+    branches: [main]
+    paths: ["apps/desktop-macos/**", "apps/desktop-windows/**", "assets/icon/**", ".github/workflows/desktop.yml"]
+  workflow_dispatch:
+  workflow_call:
+    inputs:
+      version:
+        type: string
+        required: true
+
+env:
+  # A release passes its tag's version; other builds get 0.0.<run number>.
+  VERSION: ${{ inputs.version || format('0.0.{0}', github.run_number) }}
+
+jobs:
+  macos:
+    runs-on: macos-15
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build the app
+        run: VERSION="${VERSION#v}" UPDATE_REPOSITORY="$GITHUB_REPOSITORY" apps/desktop-macos/build.sh
+      - name: Make the DMG
+        run: |
+          mkdir dmg
+          cp -R "apps/desktop-macos/build.noindex/Blade Notes.app" dmg/
+          ln -s /Applications dmg/Applications
+          hdiutil create -volname "Blade Notes" -srcfolder dmg -ov -format UDZO BladeNotes-macOS.dmg
+      - uses: actions/upload-artifact@v4
+        with:
+          name: macos
+          path: BladeNotes-macOS.dmg
+          retention-days: 14
+
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: 8.0.x
+      - name: Publish and zip
+        shell: pwsh
+        run: |
+          dotnet publish apps/desktop-windows -c Release -o publish -p:Version=$($env:VERSION.TrimStart('v')) -p:UpdateRepository=$env:GITHUB_REPOSITORY
+          if (-not (Test-Path publish/BladeNotes.exe)) { throw "BladeNotes.exe missing from the build" }
+          Compress-Archive -Path publish/* -DestinationPath BladeNotes-Windows-x64.zip
+      - uses: actions/upload-artifact@v4
+        with:
+          name: windows
+          path: BladeNotes-Windows-x64.zip
+          retention-days: 14

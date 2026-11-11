@@ -52,7 +52,7 @@ async function tokenRequest(body: Record<string, string>): Promise<Tokens> {
     headers: { 'content-type': 'application/x-www-form-urlencoded' },
     body: new URLSearchParams({ client_id: c.clientId, ...body }),
   })
-  if (!res.ok) throw new Error(`sign-in failed (${res.status})`)
+  if (!res.ok) throw new TokenRejected(res.status)
   const t = (await res.json()) as { access_token: string; refresh_token?: string; expires_in: number }
   const tokens = { access: t.access_token, refresh: t.refresh_token ?? body.refresh_token ?? '', expiresAt: Date.now() + t.expires_in * 1000 }
   localStorage.setItem(KEY, JSON.stringify(tokens))
@@ -74,15 +74,30 @@ export function isSignedIn(): boolean {
   return localStorage.getItem(KEY) !== null
 }
 
-/** A valid access token, or null when the user must sign in again. */
+/** Cognito answered "no" (expired or revoked refresh token), as opposed to a network failure. */
+class TokenRejected extends Error {
+  constructor(readonly status: number) {
+    super(`sign-in failed (${status})`)
+  }
+}
+
+let refreshing: Promise<Tokens> | null = null
+
+/**
+ * A valid access token, or null when the user must sign in again. A network failure
+ * throws instead (the caller shows "offline") and keeps the tokens: only Cognito
+ * rejecting the refresh token ends the session. Parallel callers share one refresh.
+ */
 export async function accessToken(): Promise<string | null> {
   const raw = localStorage.getItem(KEY)
   if (!raw) return null
   const t = JSON.parse(raw) as Tokens
   if (Date.now() < t.expiresAt - 60_000) return t.access
+  refreshing ??= tokenRequest({ grant_type: 'refresh_token', refresh_token: t.refresh }).finally(() => (refreshing = null))
   try {
-    return (await tokenRequest({ grant_type: 'refresh_token', refresh_token: t.refresh })).access
-  } catch {
+    return (await refreshing).access
+  } catch (err) {
+    if (!(err instanceof TokenRejected) || err.status >= 500) throw err
     localStorage.removeItem(KEY)
     return null
   }

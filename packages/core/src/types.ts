@@ -1,5 +1,9 @@
 /** Everything in the library is one item in a single tree. Depth is unlimited. */
-export type ItemType = 'space' | 'folder' | 'note' | 'task'
+/**
+ * A `description` is the hidden text behind a list item or a phrase in a note or task:
+ * its parentId is that note or task, and it never shows in the blades.
+ */
+export type ItemType = 'space' | 'folder' | 'note' | 'task' | 'description'
 
 export type TaskStatus = 'todo' | 'doing' | 'done'
 export type Priority = 'none' | 'low' | 'medium' | 'high'
@@ -64,14 +68,22 @@ export interface Settings {
   defaultCalendar: CalendarProvider | null
   /** Per-space choice; a space missing here follows `defaultCalendar`. null = this space has no calendar. */
   spaceCalendars: { [spaceId: string]: CalendarProvider | null }
+  /** Where a description opens: a blade on the right, a window over the note, or a popup at the text. */
+  descriptionView: DescriptionView
+  /** Hovering described text shows the start of its description. */
+  descriptionPreview: boolean
   updatedAt: string
 }
+
+export type DescriptionView = 'panel' | 'modal' | 'popover'
 
 export const DEFAULT_SETTINGS: Settings = {
   id: 'settings',
   bladesOpen: 3,
   defaultCalendar: null,
   spaceCalendars: {},
+  descriptionView: 'panel',
+  descriptionPreview: true,
   updatedAt: '1970-01-01T00:00:00.000Z',
 }
 

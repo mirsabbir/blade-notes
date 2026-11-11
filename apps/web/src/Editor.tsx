@@ -1,5 +1,6 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useEditor, useEditorState, EditorContent, type Editor as TiptapEditor } from '@tiptap/react'
+import { BubbleMenu } from '@tiptap/react/menus'
 import StarterKit from '@tiptap/starter-kit'
 import { TaskList } from '@tiptap/extension-task-list'
 import { TaskItem } from '@tiptap/extension-task-item'
@@ -9,19 +10,27 @@ import Image from '@tiptap/extension-image'
 import { TableKit } from '@tiptap/extension-table'
 import {
   Bold, Italic, Underline, Strikethrough, Code, Highlighter, List, ListOrdered, ListTodo,
-  TextQuote, SquareCode, Table, Link, ImagePlus, Undo2, Redo2,
+  TextQuote, SquareCode, Table, Link, ImagePlus, Undo2, Redo2, NotebookText,
 } from 'lucide-react'
-import { setBody, uploadImage } from './store'
+import { docText, setBody, settingsOf, uploadImage, useStore } from './store'
+import { Describe, DescribeMark, describeSelection, type DescribeHooks } from './describe'
 
 interface Props {
   id: string
   doc: unknown
   placeholder: string
+  /** Opens and creates hidden descriptions of list items and phrases. */
+  describe: DescribeHooks
 }
 
 /** Saves 500 ms after the last keystroke. Remounted per note (key = id) by the caller. */
-export function Editor({ id, doc, placeholder }: Props) {
+export function Editor({ id, doc, placeholder, describe }: Props) {
   const save = useRef<ReturnType<typeof setTimeout>>(undefined)
+  const latest = useRef(describe)
+  latest.current = describe
+  // One stable object for the extension; it always calls the caller's latest handlers.
+  const hooks = useMemo<DescribeHooks>(() => ({ open: (...a) => latest.current.open(...a), create: (t) => latest.current.create(t) }), [])
+  const [peek, setPeek] = useState<{ id: string; rect: DOMRect } | null>(null)
   const editor = useEditor({
     extensions: [
       StarterKit.configure({ link: { openOnClick: false, autolink: true } }),
@@ -31,6 +40,8 @@ export function Editor({ id, doc, placeholder }: Props) {
       Image,
       TableKit.configure({ table: { resizable: false } }),
       Placeholder.configure({ placeholder }),
+      DescribeMark,
+      Describe.configure({ hooks }),
     ],
     content: (doc as object) ?? '',
     editorProps: {
@@ -64,8 +75,53 @@ export function Editor({ id, doc, placeholder }: Props) {
 
   return (
     <>
-      <Toolbar editor={editor} />
-      <EditorContent editor={editor} />
+      <Toolbar editor={editor} hooks={hooks} />
+      <BubbleMenu editor={editor} className="bubble" options={{ placement: 'top' }}>
+        <BubbleButtons editor={editor} hooks={hooks} />
+      </BubbleMenu>
+      <div
+        onMouseOver={(e) => {
+          const el = (e.target as HTMLElement).closest<HTMLElement>('.desc-mark')
+          if (el?.dataset.desc) setPeek({ id: el.dataset.desc, rect: el.getBoundingClientRect() })
+        }}
+        onMouseOut={(e) => (e.target as HTMLElement).closest('.desc-mark') && setPeek(null)}
+        onClick={() => setPeek(null)}
+      >
+        <EditorContent editor={editor} />
+      </div>
+      {peek && <Peek id={peek.id} rect={peek.rect} />}
+    </>
+  )
+}
+
+/** The start of a description, shown while hovering its phrase (Settings › Descriptions can turn it off). */
+function Peek({ id, rect }: { id: string; rect: DOMRect }) {
+  const { state } = useStore()
+  const item = state.items[id]
+  if (!settingsOf(state).descriptionPreview || !item || item.deletedAt) return null
+  const text = docText(state.bodies[id]?.doc)
+  const left = Math.max(8, Math.min(rect.left, window.innerWidth - 300))
+  return (
+    <div className="peek" role="tooltip" style={{ left, top: rect.bottom + 6 }}>
+      <strong>{item.title}</strong>
+      <span>{text ? (text.length > 180 ? `${text.slice(0, 180)}…` : text) : 'No text yet.'}</span>
+      <small>Click to open</small>
+    </div>
+  )
+}
+
+function BubbleButtons({ editor, hooks }: { editor: TiptapEditor; hooks: DescribeHooks }) {
+  const s = useEditorState({ editor, selector: ({ editor: e }) => ({ bold: e.isActive('bold'), italic: e.isActive('italic'), described: e.isActive('describe') }) })
+  return (
+    <>
+      <button type="button" className={s.bold ? 'tool on' : 'tool'} aria-label="Bold" onClick={() => editor.chain().focus().toggleBold().run()}><Bold size={15} aria-hidden /></button>
+      <button type="button" className={s.italic ? 'tool on' : 'tool'} aria-label="Italic" onClick={() => editor.chain().focus().toggleItalic().run()}><Italic size={15} aria-hidden /></button>
+      <span className="sep" />
+      {!s.described && (
+        <button type="button" className="bubble-describe" onClick={() => describeSelection(editor, hooks)} title="Add a description (⌘⇧D)">
+          <NotebookText size={15} aria-hidden /> Describe
+        </button>
+      )}
     </>
   )
 }
@@ -80,7 +136,7 @@ async function insertImage(editor: TiptapEditor | null, file: File) {
   }
 }
 
-function Toolbar({ editor }: { editor: TiptapEditor }) {
+function Toolbar({ editor, hooks }: { editor: TiptapEditor; hooks: DescribeHooks }) {
   const s = useEditorState({
     editor,
     selector: ({ editor: e }) => ({
@@ -149,6 +205,7 @@ function Toolbar({ editor }: { editor: TiptapEditor }) {
       <span className="sep" />
       {btn('Link', s.link, setLink, Link)}
       {btn('Image', false, () => file.current?.click(), ImagePlus)}
+      {btn('Description for the selection or list item (⌘⇧D)', false, () => describeSelection(editor, hooks), NotebookText)}
       <input
         ref={file}
         type="file"

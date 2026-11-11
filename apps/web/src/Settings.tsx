@@ -1,11 +1,11 @@
 import { useState } from 'react'
-import { CalendarDays, CalendarOff, Check, Info, LayoutGrid, SlidersHorizontal, X } from 'lucide-react'
-import type { CalendarProvider, Item } from '@blade-notes/core'
+import { AppWindow, CalendarDays, CalendarOff, Check, Info, LayoutGrid, MessageSquare, NotebookText, PanelRight, SlidersHorizontal, X } from 'lucide-react'
+import type { CalendarProvider, DescriptionView, Item } from '@blade-notes/core'
 import { childrenOf, settingsOf, update, updateSettings, useStore } from './store'
 import { isDesktop } from './host'
 import { UpdatesSection } from './Updates'
 
-export type SettingsSection = 'general' | 'calendars' | 'spaces' | 'about'
+export type SettingsSection = 'general' | 'descriptions' | 'calendars' | 'spaces' | 'about'
 
 export const PROVIDERS: { id: CalendarProvider; name: string; detail: string }[] = [
   { id: 'google', name: 'Google Calendar', detail: 'Gmail or Google Workspace account' },
@@ -23,6 +23,7 @@ export function SettingsDialog({ initial = 'general', onClose, dark, onToggleDar
   const [section, setSection] = useState<SettingsSection>(initial)
   const nav: [SettingsSection, string, typeof Info][] = [
     ['general', 'General', SlidersHorizontal],
+    ['descriptions', 'Descriptions', NotebookText],
     ['calendars', 'Calendars', CalendarDays],
     ['spaces', 'Spaces', LayoutGrid],
     ...(isDesktop ? ([['about', 'About & updates', Info]] as [SettingsSection, string, typeof Info][]) : []),
@@ -46,6 +47,7 @@ export function SettingsDialog({ initial = 'general', onClose, dark, onToggleDar
             </button>
           </div>
           {section === 'general' && <General dark={dark} onToggleDark={onToggleDark} />}
+          {section === 'descriptions' && <Descriptions />}
           {section === 'calendars' && <Calendars />}
           {section === 'spaces' && <Spaces />}
           {section === 'about' && <UpdatesSection />}
@@ -77,6 +79,45 @@ function General({ dark, onToggleDark }: { dark: boolean; onToggleDark: () => vo
           <small>Remembered on this device.</small>
         </span>
         <input type="checkbox" className="switch" checked={dark} onChange={onToggleDark} />
+      </label>
+    </div>
+  )
+}
+
+const VIEWS: { id: DescriptionView; name: string; detail: string; Icon: typeof Info }[] = [
+  { id: 'panel', name: 'Side blade', detail: 'Opens as a blade on the right. The note stays in view, and clicking another line switches to its description.', Icon: PanelRight },
+  { id: 'modal', name: 'Window', detail: 'Opens in a window over the note. More room to write, nothing else in view.', Icon: AppWindow },
+  { id: 'popover', name: 'Popup', detail: 'Opens right at the line or phrase. Quick to read; closes when you click elsewhere.', Icon: MessageSquare },
+]
+
+/** How descriptions of list items and phrases open, and whether hovering previews them. */
+function Descriptions() {
+  const { state } = useStore()
+  const settings = settingsOf(state)
+  return (
+    <div className="settings-rows">
+      <p className="muted small">Any bullet, numbered or checklist line, and any phrase you select, can carry a hidden description with its own text and files. Add one with the small + at the end of a line, Describe on selected text, or ⌘⇧D.</p>
+      <div className="provider-grid" role="radiogroup" aria-label="Open descriptions as">
+        {VIEWS.map(({ id, name, detail, Icon }) => {
+          const on = settings.descriptionView === id
+          return (
+            <button key={id} type="button" role="radio" aria-checked={on} className={on ? 'provider-card view-card on' : 'provider-card view-card'} onClick={() => updateSettings({ descriptionView: id })}>
+              <div className="provider-top">
+                <span className="provider-mark" style={{ width: 36, height: 36 }} aria-hidden><Icon size={18} /></span>
+                {on && <span className="badge"><Check size={12} aria-hidden /> In use</span>}
+              </div>
+              <strong>{name}</strong>
+              <small>{detail}</small>
+            </button>
+          )
+        })}
+      </div>
+      <label className="setting">
+        <span>
+          <strong>Preview on hover</strong>
+          <small>Hovering a described phrase shows the start of its description.</small>
+        </span>
+        <input type="checkbox" className="switch" checked={settings.descriptionPreview} onChange={(e) => updateSettings({ descriptionPreview: e.target.checked })} />
       </label>
     </div>
   )

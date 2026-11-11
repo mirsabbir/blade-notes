@@ -7,7 +7,9 @@ import {
 import { useOpenUpdatesFromMenu } from './Updates'
 import { SettingsDialog, type SettingsSection } from './Settings'
 import { Attachments, DropZone } from './Attachments'
-import { childrenOf, clearFresh, create, freshId, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
+import { childrenOf, clearFresh, create, createDescription, docText, freshId, settingsOf, sync, trash, update, useStore, type SyncStatus } from './store'
+import { Description, type OpenDescription } from './Description'
+import type { DescribeHooks } from './describe'
 
 const DEFAULT_TITLE = { space: 'New space', folder: 'New folder', note: 'Untitled', task: 'New task' } as const
 import { signOut } from './auth'
@@ -66,6 +68,14 @@ export function App() {
     setManual((m) => Object.fromEntries(Object.entries(m).filter(([k, v]) => Number(k) < level && v)))
     setFocus(false)
   }
+  // Open descriptions belong to the open note or task: switching to another closes them.
+  const [descs, setDescs] = useState<OpenDescription[]>([])
+  useEffect(() => setDescs([]), [selected?.id])
+  const describe: DescribeHooks = {
+    open: (id, anchor, remove) => setDescs([{ id, rect: anchor.getBoundingClientRect(), remove }]),
+    create: (title) => (selected ? createDescription(selected.id, title) : ''),
+  }
+
   const maxOpen = settingsOf(state).bladesOpen
   const folded = (i: number) => focus || (manual[i] ?? i < chain.length - maxOpen)
 
@@ -125,12 +135,14 @@ export function App() {
           setFocus(!focus)
           setManual({})
         }}
+        describe={describe}
         onCrumb={(level) => go(level, null)}
         onOpen={(id) => {
           const parent = chain.at(-1)
           if (parent) go(chain.length - 1, id)
         }}
       />
+      {descs.length > 0 && <Description stack={descs} onChange={setDescs} />}
     </div>
   )
 }
@@ -161,12 +173,6 @@ function summary(kids: Item[]) {
   return [f && plural(f, 'folder'), n && plural(n, 'note'), t && plural(t, 'task')].filter(Boolean).join(' · ') || 'Empty'
 }
 
-/** Plain text of a Tiptap document, for search. */
-function docText(doc: unknown): string {
-  if (!doc || typeof doc !== 'object') return ''
-  const d = doc as { text?: string; content?: unknown[] }
-  return (d.text ?? '') + ' ' + (d.content ?? []).map(docText).join(' ')
-}
 
 function LibraryBlade(props: {
   items: { [id: string]: Item }
@@ -200,6 +206,9 @@ function LibraryBlade(props: {
     if (!term) return []
     return Object.values(items)
       .filter((i) => !i.deletedAt && (i.title.toLowerCase().includes(term) || docText(state.bodies[i.id]?.doc).toLowerCase().includes(term)))
+      // A match inside a description finds the note or task it belongs to.
+      .map((i) => (i.type === 'description' ? items[i.parentId ?? ''] : i))
+      .filter((i, n, all): i is Item => !!i && !i.deletedAt && all.indexOf(i) === n)
       .slice(0, 50)
   }, [q, items, state.bodies])
 
@@ -468,6 +477,7 @@ function EditorPane(props: {
   pendingCount: number
   focus: boolean
   onFocus: () => void
+  describe: DescribeHooks
   onCrumb: (level: number) => void
   onOpen: (id: string) => void
 }) {
@@ -515,6 +525,7 @@ function EditorPane(props: {
                 key={selected.id}
                 id={selected.id}
                 doc={props.bodies[selected.id]?.doc}
+                describe={props.describe}
                 placeholder={selected.type === 'task' ? 'Add a description: steps, links, code, a checklist.' : 'Start writing. Markdown shortcuts work: #, -, [ ], >, ```'}
               />
             </div>
