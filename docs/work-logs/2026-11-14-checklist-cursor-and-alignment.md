@@ -1,13 +1,13 @@
 ---
 type: work-log
 date: 2026-11-14
-status: "Live (7af1fab). Cursor in the macOS app still to be checked by the owner."
-title: "Checklist: cursor on empty lines, box level with the text"
+status: "Live (7af1fab, 1a602f1). Cursor in the macOS app still to be checked by the owner."
+title: "Checklist: cursor on empty lines, box level with the text, sub-items not crossed out"
 tags: [editor, checklist, css, webkit]
 source: docs/work-logs/2026-11-14-checklist-cursor-and-alignment.md
 ---
 
-# Checklist: cursor on empty lines, box level with the text
+# Checklist: cursor on empty lines, box level with the text, sub-items not crossed out
 
 **Asked.** In a checklist the cursor doesn't show, and the text sits a little higher than its box.
 
@@ -20,6 +20,8 @@ source: docs/work-logs/2026-11-14-checklist-cursor-and-alignment.md
 
 `apps/web/src/styles.css`: the text column takes the rest of the row (`flex: 1; min-width: 0`); the label is one text line tall (`height: 1lh`) with the box centred in it and no browser margin. Commit `7af1fab`, deployed 2026-11-14 (`cdk diff`: only the site's files changed).
 
+Then, on request: a ticked item crossed out its unticked sub-items too, because the line-through sat on the whole text column, nested lists included (a line-through can't be undone by a child). It now covers only the item's own blocks (`> div > :not(ul, ol)`). Commit `1a602f1`, deployed the same day.
+
 ## Checked
 
 On a local editor with the app's real CSS and extensions:
@@ -28,10 +30,10 @@ On a local editor with the app's real CSS and extensions:
 - Safari: box level with the text. The cursor itself could not be watched there (Safari would not come to the front during the test).
 - All tests and typecheck pass.
 - After the deploy, the live stylesheet carries the three new rules; HSTS and CSP headers still answer.
+- Sub-items (Chrome, on screen): under a ticked item, unticked children and grandchildren read normally and ticked ones are crossed out; a ticked child under an unticked parent is crossed out; ticking a sub-item updates at once. The live stylesheet carries the new rule after the second deploy.
 
 Side effect, same as bullet lines already had: hovering anywhere on a checklist line now shows the "+ Description" button.
 
 ## Open
 
 - Owner: reload the macOS app (⌘R) and check the cursor on an empty checklist line.
-- Not changed: a checked item strikes through its unchecked children too (`li[data-checked='true'] > div` covers nested lists).
