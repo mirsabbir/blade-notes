@@ -1,7 +1,7 @@
 ---
 type: work-log
 date: 2026-11-14
-status: "Fixed and checked locally; not deployed yet."
+status: "Live (7af1fab). Cursor in the macOS app still to be checked by the owner."
 title: "Checklist: cursor on empty lines, box level with the text"
 tags: [editor, checklist, css, webkit]
 source: docs/work-logs/2026-11-14-checklist-cursor-and-alignment.md
@@ -18,7 +18,7 @@ source: docs/work-logs/2026-11-14-checklist-cursor-and-alignment.md
 
 ## Done
 
-`apps/web/src/styles.css`: the text column takes the rest of the row (`flex: 1; min-width: 0`); the label is one text line tall (`height: 1lh`) with the box centred in it and no browser margin.
+`apps/web/src/styles.css`: the text column takes the rest of the row (`flex: 1; min-width: 0`); the label is one text line tall (`height: 1lh`) with the box centred in it and no browser margin. Commit `7af1fab`, deployed 2026-11-14 (`cdk diff`: only the site's files changed).
 
 ## Checked
 
@@ -26,11 +26,12 @@ On a local editor with the app's real CSS and extensions:
 
 - Chrome: box middle = capital-letter middle (0 px off) on single, wrapped and nested lines; empty line's text column full width (was 0 px); rows now exactly one line tall; cursor shows on a clicked empty line and on the new line after Enter; ticking a box still works.
 - Safari: box level with the text. The cursor itself could not be watched there (Safari would not come to the front during the test).
-- `apps/web` build and tests pass.
+- All tests and typecheck pass.
+- After the deploy, the live stylesheet carries the three new rules; HSTS and CSP headers still answer.
 
 Side effect, same as bullet lines already had: hovering anywhere on a checklist line now shows the "+ Description" button.
 
 ## Open
 
-- Deploy, then check the cursor in the macOS app.
+- Owner: reload the macOS app (⌘R) and check the cursor on an empty checklist line.
 - Not changed: a checked item strikes through its unchecked children too (`li[data-checked='true'] > div` covers nested lists).
