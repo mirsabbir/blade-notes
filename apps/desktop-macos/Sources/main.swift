@@ -39,7 +39,12 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
     /// the page first: mid-upload it offers to keep the app open. Then it waits a moment, so the
     /// page's last save reaches disk.
     func applicationShouldTerminate(_ sender: NSApplication) -> NSApplication.TerminateReply {
+        // A page that never answers must not keep the app open: quit after 3 s regardless.
+        var answered = false
+        DispatchQueue.main.asyncAfter(deadline: .now() + 3) { if !answered { NSApp.reply(toApplicationShouldTerminate: true) } }
         web.evaluateJavaScript("window.__bladeBusy ? window.__bladeBusy() : null") { result, _ in
+            guard !answered else { return }
+            answered = true
             if let why = result as? String, !why.isEmpty {
                 let alert = NSAlert()
                 alert.alertStyle = .warning
@@ -130,7 +135,9 @@ final class AppDelegate: NSObject, NSApplicationDelegate, WKNavigationDelegate, 
                 return (await Updater.check(force: params["force"] as? Bool ?? false), nil)
             case "installUpdate":
                 try await Updater.install()
-                NSApp.terminate(nil)
+                // Quit after this reply reaches the page: quitting inside the handler left the
+                // page's answer to Quit unread, so the app hung and the update never applied.
+                DispatchQueue.main.async { NSApp.terminate(nil) }
                 return (nil, nil)
             default:
                 return (nil, "unknown method \(method)")

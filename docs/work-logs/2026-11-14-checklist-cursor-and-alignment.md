@@ -37,3 +37,8 @@ Side effect, same as bullet lines already had: hovering anywhere on a checklist 
 ## Open
 
 - Owner: reload the macOS app (⌘R) and check the cursor on an empty checklist line.
+
+## Releases
+
+- `v0.1.1` released for the checklist fixes (owner wants a version for every shipped fix).
+- Updating 0.1.0 → 0.1.1 on the Mac hung: the update downloaded and the swap helper waited, but the app never quit. `installUpdate` called `NSApp.terminate` inside the page's bridge call, and the Quit check (`__bladeBusy`) then never got its answer. Unstuck by closing the app; the helper installed 0.1.1. Fix in `apps/desktop-macos/Sources/main.swift`: quit after the bridge reply, and Quit no longer waits more than 3 s for the page. Released as `v0.1.2`. The 0.1.1 → 0.1.2 update still runs the old code and can hang once: quit the app (Force Quit if needed) and the helper finishes.
