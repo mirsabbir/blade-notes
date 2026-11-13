@@ -51,6 +51,7 @@ How Blade Notes works, how to run it, why it is built this way, and what was don
 
 | Date | Topic | Status |
 |---|---|---|
+| [2026-11-14](work-logs/2026-11-14-checklist-cursor-and-alignment.md) | Checklist: cursor on empty lines, box level with the text | Fixed and checked locally; not deployed yet. |
 | [2026-11-11](work-logs/2026-11-11-close-warnings.md) | Warn before closing mid-upload; save the last keystrokes on close | Live on the web and in the desktop apps (v0.1.0). |
 | [2026-11-11](work-logs/2026-11-11-dates-agenda-calendar-copy.md) | Dates while writing (@), Agenda, calendar sync, time zones, Copy | Live and checked in the app. Google/Outlook sync waits for their OAuth apps (owner, runbook); iCloud can be connected now. |
 | [2026-11-11](work-logs/2026-11-11-desktop-release-v0.1.0.md) | First desktop release: v0.1.0 | Released. Installed apps from now on update themselves from GitHub Releases. |

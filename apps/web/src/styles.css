@@ -148,8 +148,11 @@ kbd { font-family: 'Geist Mono Variable', ui-monospace, monospace; font-size: 11
 .doc .selectedCell { background: var(--accent); }
 .doc ul[data-type='taskList'] { list-style: none; padding-left: 0.2em; }
 .doc ul[data-type='taskList'] li { display: flex; align-items: flex-start; gap: 0.5em; }
-.doc ul[data-type='taskList'] li > label { margin-top: 0.25em; }
-.doc ul[data-type='taskList'] li > label input { width: 16px; height: 16px; accent-color: var(--primary); }
+/* The box is centred on the first text line (1lh tall), so it lines up however the line wraps. */
+.doc ul[data-type='taskList'] li > label { flex: none; height: 1lh; display: flex; align-items: center; user-select: none; }
+.doc ul[data-type='taskList'] li > label input { width: 16px; height: 16px; margin: 0; accent-color: var(--primary); }
+/* Full width, so an empty line still has somewhere for the cursor (WebKit draws none in a 0px box). */
+.doc ul[data-type='taskList'] li > div { flex: 1; min-width: 0; }
 .doc ul[data-type='taskList'] li[data-checked='true'] > div { text-decoration: line-through; color: var(--muted-fg); }
 .doc p.is-editor-empty:first-child::before { content: attr(data-placeholder); color: var(--muted-fg); float: left; height: 0; pointer-events: none; }
 
