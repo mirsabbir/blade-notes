@@ -53,7 +53,7 @@ How Blade Notes works, how to run it, why it is built this way, and what was don
 
 | Date | Topic | Status |
 |---|---|---|
-| [2026-11-15](work-logs/2026-11-15-trash.md) | Trash: restore, delete for good, 30 days | Live (2698593), released as v0.1.3, tested live. First clean-up run to check. |
+| [2026-11-15](work-logs/2026-11-15-trash.md) | Trash: restore, delete for good, 30 days | Live (2698593), released as v0.1.3, tested live; first clean-up run clean. |
 | [2026-11-14](work-logs/2026-11-14-checklist-cursor-and-alignment.md) | Checklist: cursor on empty lines, box level with the text, sub-items not crossed out | Live (7af1fab, 1a602f1). Cursor in the macOS app still to be checked by the owner. |
 | [2026-11-11](work-logs/2026-11-11-close-warnings.md) | Warn before closing mid-upload; save the last keystrokes on close | Live on the web and in the desktop apps (v0.1.0). |
 | [2026-11-11](work-logs/2026-11-11-dates-agenda-calendar-copy.md) | Dates while writing (@), Agenda, calendar sync, time zones, Copy | Live and checked in the app. Google/Outlook sync waits for their OAuth apps (owner, runbook); iCloud can be connected now. |
