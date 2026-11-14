@@ -14,7 +14,7 @@ Everything you write lives first on your device (IndexedDB) and works offline; a
 
 ## Data model
 
-Everything is an `Item` in one tree (`packages/core/src/types.ts`): `space` (root level), `folder`, `note`, `task`. Each has a `parentId` and a fractional `rank` for its position among siblings, so moving one item rewrites only that item. Depth is unlimited. Deleting sets `deletedAt` (trash) on the item and everything under it.
+Everything is an `Item` in one tree (`packages/core/src/types.ts`): `space` (root level), `folder`, `note`, `task`. Each has a `parentId` and a fractional `rank` for its position among siblings, so moving one item rewrites only that item. Depth is unlimited. Deleting sets `deletedAt` (trash) on the item and everything under it; `purgedAt` marks a tombstone, deleted for good. Rules: [07-trash.md](07-trash.md).
 
 Two kinds never show in the blades; their `parentId` is the note or task they belong to:
 
@@ -53,7 +53,7 @@ sequenceDiagram
 
 - Items are last-write-wins.
 - A body is only written if the stored one is still the version the edit started from (`baseSeq`). Otherwise the server keeps its copy and the device saves its own text as a sibling note named "… (conflict copy)". Nothing is lost.
-- While a record is pending on a device, pulled versions of it are skipped until the push lands.
+- While a record is pending on a device, pulled versions of it are skipped until the push lands, except a tombstone: deleted for good beats any edit, on the device and on the server ([07](07-trash.md)).
 - Devices sync on start, every 10 s while visible, and on focus or reconnect. The same tick checks the clock: when the day or the device's time zone changed, everything redraws (see [03](03-dates-and-agenda.md#time-zones)).
 
 ## Closing the app

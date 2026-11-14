@@ -57,6 +57,13 @@ const TOPICS: { title: string; rows: [ReactNode, ReactNode][] }[] = [
       ['Blades', 'Each folder opens a column to the right; older ones fold into strips. Click a strip to open it, or use Focus to fold them all.'],
     ],
   },
+  {
+    title: 'Trash',
+    rows: [
+      ['Trash in the Library', 'Deleted notes, tasks, folders and attachments wait there 30 days, then they are deleted for good. One line per delete.'],
+      ['Restore', 'Brings back what that delete took, never its neighbours. If the folder or note it was in is in the trash too, that comes back as well, without its other contents.'],
+    ],
+  },
 ]
 
 export function Help() {

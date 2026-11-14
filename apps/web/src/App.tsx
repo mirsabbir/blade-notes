@@ -1,5 +1,5 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react'
-import type { Item, TaskStatus } from '@blade-notes/core'
+import { liveAttachments, trashRows, TRASH_DAYS, type Item, type TaskStatus } from '@blade-notes/core'
 import {
   ChevronRight, Circle, CircleCheck, FileText, Folder, Maximize2, Moon, PanelLeftClose, PanelLeftOpen,
   Plus, Search, Sun, Trash2, LogOut, CloudOff, RefreshCw, Check, AlertTriangle, Settings, Paperclip, CalendarCheck, Copy,
@@ -7,6 +7,7 @@ import {
 import { useOpenUpdatesFromMenu } from './Updates'
 import { calendarReturn, openSettings, SettingsDialog, useSettingsRequests, type SettingsSection } from './Settings'
 import { AgendaBlade, dueNow, entriesOf, type Entry } from './Agenda'
+import { TrashBlade } from './Trash'
 import { copyItem } from './copy'
 import { VaultHost } from './VaultPanel'
 import { Attachments, DropZone } from './Attachments'
@@ -65,6 +66,7 @@ export function App() {
   const [focus, setFocus] = useState(false)
   const [dark, setDark] = usePersisted('bn:dark', matchMedia('(prefers-color-scheme: dark)').matches)
   const [agenda, setAgenda] = usePersisted('bn:agenda', false)
+  const [trashOpen, setTrashOpen] = useState(false)
   const [agendaGroup, setAgendaGroup] = usePersisted<'space' | 'day'>('bn:agenda-group', 'space')
   // The date to point at once its note or task is open: from the Agenda or a calendar link.
   const [flash, setFlash] = useState<{ id: string; n: number }>()
@@ -135,7 +137,7 @@ export function App() {
   // Fold as many blades as it takes for the note (and an open description blade) to fit the window.
   const width = useWindowWidth()
   const panelOpen = descs.length > 0 && settingsOf(state).descriptionView === 'panel' && width > 900
-  const fits = Math.floor((width - EDITOR_MIN - (panelOpen ? DESC_PANEL : 0) - (agenda ? AGENDA : 0) - STRIP * chain.length) / BLADE)
+  const fits = Math.floor((width - EDITOR_MIN - (panelOpen ? DESC_PANEL : 0) - (agenda || trashOpen ? AGENDA : 0) - STRIP * chain.length) / BLADE)
   const maxOpen = width <= 720 ? settingsOf(state).bladesOpen : Math.max(panelOpen ? 0 : 1, Math.min(settingsOf(state).bladesOpen, fits))
   const folded = (i: number) => focus || (manual[i] ?? i < chain.length - maxOpen)
 
@@ -162,7 +164,15 @@ export function App() {
             dark={dark}
             onToggleDark={() => setDark(!dark)}
             agendaOpen={agenda}
-            onAgenda={() => setAgenda(!agenda)}
+            onAgenda={() => {
+              setAgenda(!agenda)
+              setTrashOpen(false)
+            }}
+            trashOpen={trashOpen}
+            onTrash={() => {
+              setTrashOpen(!trashOpen)
+              setAgenda(false)
+            }}
           />
         ) : (
           <FolderBlade
@@ -180,6 +190,7 @@ export function App() {
         i === 0 && agenda && !focus && (
           <AgendaBlade key="agenda" group={agendaGroup} onGroup={setAgendaGroup} onOpen={openEntry} onFold={() => setAgenda(false)} activeId={selected?.id} />
         ),
+        i === 0 && trashOpen && !focus && <TrashBlade key="trash" onFold={() => setTrashOpen(false)} />,
       ])}
       <EditorPane
         flash={flash}
@@ -253,6 +264,8 @@ function LibraryBlade(props: {
   onToggleDark: () => void
   agendaOpen: boolean
   onAgenda: () => void
+  trashOpen: boolean
+  onTrash: () => void
 }) {
   const { items } = props
   const { state } = useStore()
@@ -287,6 +300,7 @@ function LibraryBlade(props: {
 
   const entries = entriesOf(items)
   const open = entries.filter((e) => !e.done).length
+  const inTrash = useMemo(() => trashRows(items).length, [items])
   const now = dueNow(entries)
 
   return (
@@ -322,6 +336,15 @@ function LibraryBlade(props: {
                   <small>{open === 0 ? 'Type @ in any note to add a date' : now ? `${now} today or late` : `${open} coming up`}</small>
                 </span>
                 {now > 0 && <span className="due today">{now}</span>}
+              </button>
+            </div>
+            <div className={`row${props.trashOpen ? ' active' : ''}`}>
+              <button type="button" className="row-main" aria-pressed={props.trashOpen} onClick={props.onTrash}>
+                <Trash2 size={16} className="ico" aria-hidden />
+                <span className="name">
+                  Trash
+                  <small>{inTrash ? `${inTrash} in the trash` : `Deleted things wait here ${TRASH_DAYS} days`}</small>
+                </span>
               </button>
             </div>
             <div className="section"><span>Spaces</span><span>{spaces.length}</span></div>
@@ -486,6 +509,7 @@ function Row({ item, items, active, onOpen, subtitle }: { item: Item; items: { [
   const done = item.type === 'task' && item.status === 'done'
   const count = isBox(item) ? childrenOf(items, item.id).length : null
   const late = item.due && !done && item.due.slice(0, 10) <= new Date().toISOString().slice(0, 10)
+  const files = liveAttachments(item).length
   return (
     <div className={`row${active ? ' active' : ''}${done ? ' done' : ''}`}>
       {item.type === 'task' && (
@@ -507,10 +531,10 @@ function Row({ item, items, active, onOpen, subtitle }: { item: Item; items: { [
           {item.title}
           {subtitle && <small>{subtitle}</small>}
         </span>
-        {item.attachments?.length ? (
-          <span className="meta clip" title={`${item.attachments.length} attached`}>
+        {files ? (
+          <span className="meta clip" title={`${files} attached`}>
             <Paperclip size={12} aria-hidden />
-            {item.attachments.length}
+            {files}
           </span>
         ) : null}
         {item.due && !done && <span className={late ? 'due today' : 'due'}>{dueLabel(item.due)}</span>}

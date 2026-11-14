@@ -27,6 +27,7 @@ How Blade Notes works, how to run it, why it is built this way, and what was don
 | [04](architecture/04-calendar-sync.md) | Calendar sync: Google, Outlook, iCloud |
 | [05](architecture/05-secret-blocks.md) | Secret blocks and the vault |
 | [06](architecture/06-copy-and-paste.md) | Copy and paste: chips, secrets and the Copy button |
+| [07](architecture/07-trash.md) | Trash: delete, restore, delete for good |
 
 ## Runbooks: how to do it
 
@@ -46,11 +47,13 @@ How Blade Notes works, how to run it, why it is built this way, and what was don
 | [0002](decisions/0002-timed-dates-are-moments.md) | A timed date is a moment; an all-day date is a day | accepted |
 | [0003](decisions/0003-kms-key-now-own-key-later.md) | One AWS-made KMS key now; own key material later | accepted |
 | [0004](decisions/0004-secret-blocks-in-the-browser.md) | Secret blocks are encrypted in the browser | accepted |
+| [0005](decisions/0005-trash-moments-and-no-siblings.md) | One delete is one moment; restore never brings back a sibling | accepted |
 
 ## Work logs: what was done
 
 | Date | Topic | Status |
 |---|---|---|
+| [2026-11-15](work-logs/2026-11-15-trash.md) | Trash: restore, delete for good, 30 days | Built and tested; deploying. |
 | [2026-11-14](work-logs/2026-11-14-checklist-cursor-and-alignment.md) | Checklist: cursor on empty lines, box level with the text, sub-items not crossed out | Live (7af1fab, 1a602f1). Cursor in the macOS app still to be checked by the owner. |
 | [2026-11-11](work-logs/2026-11-11-close-warnings.md) | Warn before closing mid-upload; save the last keystrokes on close | Live on the web and in the desktop apps (v0.1.0). |
 | [2026-11-11](work-logs/2026-11-11-dates-agenda-calendar-copy.md) | Dates while writing (@), Agenda, calendar sync, time zones, Copy | Live and checked in the app. Google/Outlook sync waits for their OAuth apps (owner, runbook); iCloud can be connected now. |

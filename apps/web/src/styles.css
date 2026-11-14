@@ -387,3 +387,11 @@ a.file-name:hover { text-decoration: underline; }
 .help-row dt { font-weight: 500; }
 .help-row dd { margin: 0; color: var(--muted-fg); }
 @media (max-width: 600px) { .help-row { grid-template-columns: 1fr; gap: 2px; } }
+
+/* ---- trash ---- */
+.trash-line { align-items: flex-start; gap: 2px; padding: 8px 4px 8px 10px; }
+.trash-line .name { white-space: normal; font-size: 14px; font-weight: 500; overflow-wrap: anywhere; }
+.trash-line .name small { white-space: normal; }
+.trash-ico { flex: none; width: 16px; height: 20px; margin-right: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted-fg); }
+.trash-left.soon { color: var(--warn); }
+.trash-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }

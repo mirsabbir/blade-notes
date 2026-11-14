@@ -1,6 +1,6 @@
 import { useRef, useState, type DragEvent, type ReactNode } from 'react'
 import { File, FileArchive, FileImage, FileSpreadsheet, FileText, Paperclip, X, Download, Loader2 } from 'lucide-react'
-import type { Attachment, Item } from '@blade-notes/core'
+import { liveAttachments, type Attachment, type Item } from '@blade-notes/core'
 import { attach, detach, downloadFile, MAX_FILE_MB } from './store'
 
 function sizeLabel(n: number) {
@@ -30,7 +30,7 @@ async function download(a: Attachment) {
 export function Attachments({ item, uploading, onUploading }: { item: Item; uploading: string[]; onUploading: (names: string[]) => void }) {
   const input = useRef<HTMLInputElement>(null)
   const [error, setError] = useState('')
-  const list = item.attachments ?? []
+  const list = liveAttachments(item)
   const pick = async (files: File[]) => {
     setError('')
     onUploading(files.map((f) => f.name))
@@ -75,7 +75,7 @@ export function Attachments({ item, uploading, onUploading }: { item: Item; uplo
               <button type="button" className="ghost" aria-label={`Download ${a.name}`} onClick={() => void download(a)}>
                 <Download size={15} aria-hidden />
               </button>
-              <button type="button" className="ghost" aria-label={`Remove ${a.name}`} onClick={() => detach(item.id, a.id)}>
+              <button type="button" className="ghost" aria-label={`Move ${a.name} to the trash`} title="Move to trash" onClick={() => detach(item.id, a.id)}>
                 <X size={15} aria-hidden />
               </button>
             </li>

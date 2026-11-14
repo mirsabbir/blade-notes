@@ -17,6 +17,7 @@ Words used across the app, the code and these docs. Alphabetical; add a term the
 | **Blade** | One column of the layout. Clicking a space or folder opens a blade to the right; older ones fold into *strips*. |
 | **Body** | The rich text (Tiptap JSON) of a note, task or description, stored apart from its item (`BODY#<id>`) so listing a folder never loads text. |
 | **Chip (date chip)** | The date shown inside a line of text, made by typing `@`. A `dateChip` node `{ id, at }` that links to an *event*. |
+| **Delete for good** | The end of the trash: by hand, or 30 days after deleting. Leaves a *tombstone*; a daily job frees the text and the files nothing else uses. [07](architecture/07-trash.md). |
 | **Cursor** | The highest `seq` a device has pulled; the next pull asks for everything after it. |
 | **Description** | Hidden text (with its own files) behind a list item or a phrase; an item of type `description` whose parent is the note or task. |
 | **Event** | An item of type `event`: one date typed with `@`, with `at`, `tz`, `status`, `private`. The chip in the text points to it. |
@@ -32,6 +33,8 @@ Words used across the app, the code and these docs. Alphabetical; add a term the
 | **seq** | The account-wide write counter; every stored record gets the next number. Sync is "give me everything after seq N". |
 | **Space** | A top-level item (Personal, Work, …) with a colour and its own calendar choice. |
 | **Strip** | A folded blade: a thin vertical bar with its title; click to open it again. |
+| **Tombstone** | What is left of an item deleted for good: its record with `purgedAt`, its place in the tree and no text. Wins over any later write, so every device drops its copy. |
+| **Trash line** | One line in the Trash: everything one delete took (same `deletedAt`), or one attachment. Restoring it never brings back a sibling. |
 | **Timed date** | A date with a time, stored as one moment with the offset where it was set (`2026-11-15T09:00:00+06:00`) and shown in the zone the device is in now. |
 | **Vault** | The passphrase-protected key that encrypts Secret blocks; only its wrapped form is stored (`Settings.vault`). |
 | **Work log** | One page per topic per day in `work-logs/`: what was asked, decided, done and checked. |

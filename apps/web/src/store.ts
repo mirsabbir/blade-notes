@@ -1,6 +1,9 @@
 import { useSyncExternalStore } from 'react'
 import { get, set } from 'idb-keyval'
-import { between, currentZone, DEFAULT_SETTINGS, tooLarge, utf8Bytes, ymd, type Item, type PullResponse, type PushResponse, type Change, type Settings } from '@blade-notes/core'
+import {
+  applyPurge, applyRestore, between, currentZone, DEFAULT_SETTINGS, expiredPlan, purgePlan, restorePlan, tooLarge, trashIds, utf8Bytes, ymd,
+  type Item, type PullResponse, type PushResponse, type Change, type Settings, type Target,
+} from '@blade-notes/core'
 import { accessToken } from './auth'
 
 /**
@@ -183,7 +186,7 @@ export function reconcileEvents(bodyId: string, doc: unknown): void {
   let items = state.items
   let pending = state.pending
   for (const it of Object.values(state.items)) {
-    if (it.type !== 'event' || it.parentId !== bodyId) continue
+    if (it.type !== 'event' || it.parentId !== bodyId || it.purgedAt) continue
     const line = found.get(it.id)
     let next: Item | null = null
     if (line === undefined) next = it.deletedAt ? null : { ...it, deletedAt: t }
@@ -255,21 +258,38 @@ export function update(id: string, patch: Partial<Item>): void {
   scheduleSync()
 }
 
-/** Moves the item and everything under it to the trash. */
-export function trash(id: string): void {
-  const t = now()
+/** Stores changed items and queues them for sync; `gone`: items deleted for good, whose text goes too. */
+function save(changed: Item[], gone: string[] = []): void {
+  if (!changed.length) return
   const items = { ...state.items }
   let pending = state.pending
-  const walk = (x: string) => {
-    const it = items[x]
-    if (!it) return
-    items[x] = { ...it, deletedAt: t, updatedAt: t }
-    pending = mark(pending, `item:${x}`)
-    Object.values(state.items).filter((c) => c.parentId === x && !c.deletedAt).forEach((c) => walk(c.id))
+  for (const it of changed) {
+    items[it.id] = it
+    pending = mark(pending, `item:${it.id}`)
   }
-  walk(id)
-  commit({ ...state, items, pending })
+  const bodies = { ...state.bodies }
+  for (const id of gone) delete bodies[id]
+  const drop = new Set(gone.map((id) => `body:${id}`))
+  commit({ ...state, items, bodies, pending: pending.filter((k) => !drop.has(k)) })
   scheduleSync()
+}
+
+/** Moves the item and everything under it to the trash, as one entry (core trash.ts has the rules). */
+export function trash(id: string): void {
+  const t = now()
+  save(trashIds(state.items, id).map((x) => ({ ...state.items[x]!, deletedAt: t, updatedAt: t })))
+}
+
+/** Takes an item or attachment out of the trash, with the places above it that are in the trash too. */
+export function restore(target: Target): void {
+  const plan = restorePlan(state.items, target)
+  if (plan) save(applyRestore(state.items, plan, now()))
+}
+
+/** Deletes something in the trash for good, or, with no target, everything in the trash. */
+export function deleteForever(target?: Target): void {
+  const plan = target ? purgePlan(state.items, target) : expiredPlan(state.items, Infinity)
+  save(applyPurge(state.items, plan, now()), plan.items)
 }
 
 export const settingsOf = (s: State): Settings => ({ ...DEFAULT_SETTINGS, ...s.settings })
@@ -437,12 +457,22 @@ async function pullAll(): Promise<void> {
     let settings = state.settings
     const pending = new Set(state.pending)
     for (const r of res.records) {
-      if (pending.has(`${r.kind}:${r.data.id}`)) continue // our newer local edit wins until it is pushed
-      if (r.kind === 'item') items[r.data.id] = r.data
-      else if (r.kind === 'body') bodies[r.data.id] = { doc: r.data.doc, seq: r.seq }
-      else settings = r.data
+      const id = r.data.id
+      // Our newer local edit wins until it is pushed; but deleted for good beats any edit.
+      const gone = r.kind === 'item' && !!r.data.purgedAt
+      if (pending.has(`${r.kind}:${id}`) && !gone) continue
+      if (r.kind === 'item') {
+        items[id] = r.data
+        if (gone) {
+          delete bodies[id]
+          pending.delete(`item:${id}`)
+          pending.delete(`body:${id}`)
+        }
+      } else if (r.kind === 'body') {
+        if (!items[id]?.purgedAt) bodies[id] = { doc: r.data.doc, seq: r.seq }
+      } else settings = r.data
     }
-    commit({ ...state, items, bodies, settings, cursor: res.cursor })
+    commit({ ...state, items, bodies, settings, cursor: res.cursor, pending: state.pending.filter((k) => pending.has(k)) })
     if (!res.more) return
   }
 }
@@ -539,7 +569,9 @@ export async function attach(itemId: string, files: File[]): Promise<void> {
   }
 }
 
+/** Moves an attachment to the trash; it stays in its item's list until it is deleted for good. */
 export function detach(itemId: string, attachmentId: string): void {
   const cur = state.items[itemId]
-  if (cur) update(itemId, { attachments: (cur.attachments ?? []).filter((a) => a.id !== attachmentId) })
+  const t = now()
+  if (cur) update(itemId, { attachments: (cur.attachments ?? []).map((a) => (a.id === attachmentId ? { ...a, deletedAt: t } : a)) })
 }

@@ -13,13 +13,13 @@ import { tooLarge, type Body, type Change, type PullResponse, type PushRequest, 
  * Every write takes the next `seq` from the counter; the `bySeq` index (pk, seq)
  * answers "what changed after N", which is the whole sync protocol.
  */
-const TABLE = process.env.TABLE_NAME!
-const BUCKET = process.env.FILES_BUCKET!
+export const TABLE = process.env.TABLE_NAME!
+export const BUCKET = process.env.FILES_BUCKET!
 const PAGE = 500
 const MAX_CHANGES = 200
 
-const db = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } })
-const s3 = new S3Client({})
+export const db = DynamoDBDocumentClient.from(new DynamoDBClient({}), { marshallOptions: { removeUndefinedValues: true } })
+export const s3 = new S3Client({})
 
 const json = (statusCode: number, body: unknown): Result => ({
   statusCode,
@@ -73,7 +73,7 @@ async function pull(pk: string, since: number): Promise<PullResponse> {
 }
 
 /** Reserves `count` seq numbers and returns the first one. */
-async function reserve(pk: string, count: number): Promise<number> {
+export async function reserve(pk: string, count: number): Promise<number> {
   const res = await db.send(
     new UpdateCommand({
       TableName: TABLE,
@@ -110,6 +110,8 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
         ConditionExpression: 'attribute_not_exists(seq) OR seq <= :base',
         ExpressionAttributeValues: { ':base': c.baseSeq },
       }),
+      // Deleted for good stays deleted: an edit or a restore from a device that has not heard yet loses.
+      ...(c.kind === 'item' && !c.data.purgedAt && { ConditionExpression: 'attribute_not_exists(#d.purgedAt)', ExpressionAttributeNames: { '#d': 'data' } }),
     })
     try {
       await db.send(put)
@@ -121,6 +123,8 @@ async function push(pk: string, req: PushRequest): Promise<PushResponse> {
         continue
       }
       if (!(err instanceof ConditionalCheckFailedException)) throw err
+      // An item refused over its tombstone: the device drops its copy when its pull brings the tombstone.
+      if (c.kind === 'item') continue
       const current = await db.send(new GetCommand({ TableName: TABLE, Key: { pk, sk } }))
       out.conflicts.push({ id: c.data.id, server: fromStored('body', current.Item!.data) as Body, seq: current.Item!.seq as number })
     }

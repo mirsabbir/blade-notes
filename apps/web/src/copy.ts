@@ -5,7 +5,7 @@ import { TaskItem } from '@tiptap/extension-task-item'
 import Highlight from '@tiptap/extension-highlight'
 import Image from '@tiptap/extension-image'
 import { TableKit } from '@tiptap/extension-table'
-import type { Item } from '@blade-notes/core'
+import { liveAttachments, type Item } from '@blade-notes/core'
 import { fullDay, plainLabel } from './dates'
 import { DescribeMark, Describe } from './describe'
 import { DateChip } from './schedule'
@@ -146,7 +146,8 @@ export function toMarkdown(item: Item, doc: unknown): string {
     block(n, '', out)
     out.push('')
   })
-  if (item.attachments?.length) out.push(`Attachments: ${item.attachments.map((a) => a.name).join(', ')}`)
+  const files = liveAttachments(item)
+  if (files.length) out.push(`Attachments: ${files.map((a) => a.name).join(', ')}`)
   return out.join('\n').replace(/\n{3,}/g, '\n\n').trim() + '\n'
 }
 
@@ -156,12 +157,13 @@ export function toHtml(item: Item, doc: unknown): string {
   const { items } = currentState()
   const body = doc ? generateHTML(doc as Parameters<typeof generateHTML>[0], extensions) : ''
   const descs = Object.values(items).filter((d) => d.type === 'description' && d.parentId === item.id && !d.deletedAt)
+  const files = liveAttachments(item)
   return [
     `<h1>${esc(item.title)}</h1>`,
     `<p>${esc(meta(item).join(' · '))}</p>`,
     body,
     descs.length ? `<h3>Descriptions</h3><ul>${descs.map((d) => `<li><b>${esc(d.title)}</b>: ${esc(descText(d.id))}</li>`).join('')}</ul>` : '',
-    item.attachments?.length ? `<p>Attachments: ${esc(item.attachments.map((a) => a.name).join(', '))}</p>` : '',
+    files.length ? `<p>Attachments: ${esc(files.map((a) => a.name).join(', '))}</p>` : '',
   ].join('')
 }
 

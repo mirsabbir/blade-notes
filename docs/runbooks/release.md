@@ -8,7 +8,7 @@ source: docs/runbooks/release.md
 
 # Release the desktop apps
 
-Only for changes under `apps/desktop-*`: the desktop apps load the live site, so web changes need a deploy ([deploy.md](deploy.md)), not a release.
+The desktop apps load the live site, so a web change reaches them with a deploy ([deploy.md](deploy.md)). The owner still wants a release for every shipped change, so the version moves with it: deploy, then tag.
 
 1. Everything committed on `main` and pushed; the "Desktop builds" workflow green for that commit.
 2. Tag and push (versions go up: `v0.1.1`, `v0.2.0`, …):

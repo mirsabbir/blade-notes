@@ -89,6 +89,8 @@ export class NotesStack extends Stack {
       encryptionKey: key,
       bucketKeyEnabled: true,
       versioned: true,
+      // A file deleted for good (trash, after cleanup) keeps an old version for 7 days, then it is gone.
+      lifecycleRules: [{ noncurrentVersionExpiration: Duration.days(7), expiredObjectDeleteMarker: true }],
       removalPolicy: RemovalPolicy.RETAIN,
       // POST: uploads. GET: the app fetches a file with a short signed link after asking /api/files.
       cors: [{ allowedMethods: [s3.HttpMethods.POST, s3.HttpMethods.GET], allowedOrigins: [siteUrl, devUrl], allowedHeaders: ['*'] }],
@@ -135,6 +137,26 @@ export class NotesStack extends Stack {
     })
     table.grantReadWriteData(fn)
     files.grantReadWrite(fn)
+
+    // ---- Trash: once a day, delete for good what has been in the trash 30 days, and free
+    // the text and files of everything deleted for good (services/api/src/purge.ts).
+    const purge = new NodejsFunction(this, 'Purge', {
+      entry: path.join(root, 'services/api/src/purge.ts'),
+      handler: 'purge',
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 512,
+      timeout: Duration.minutes(5),
+      environment: { TABLE_NAME: table.tableName, FILES_BUCKET: files.bucketName },
+      logGroup: new logs.LogGroup(this, 'PurgeLogs', { retention: logs.RetentionDays.ONE_MONTH, encryptionKey: key, removalPolicy: RemovalPolicy.DESTROY }),
+      bundling: { format: OutputFormat.ESM, target: 'node22', minify: true, sourceMap: true, externalModules: [], banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);" },
+    })
+    table.grantReadWriteData(purge)
+    files.grantDelete(purge)
+    new events.Rule(this, 'PurgeDaily', {
+      schedule: events.Schedule.cron({ hour: '21', minute: '30' }), // 03:30 in Dhaka
+      targets: [new eventTargets.LambdaFunction(purge, { retryAttempts: 2 })],
+    })
 
     const api = new apigw.HttpApi(this, 'Http', { createDefaultStage: true })
     const auth = new HttpJwtAuthorizer('Jwt', `https://cognito-idp.${this.region}.amazonaws.com/${users.userPoolId}`, {

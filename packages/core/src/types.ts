@@ -41,8 +41,13 @@ export interface Item {
   attachments?: Attachment[]
   createdAt: string
   updatedAt: string
-  /** Set when the item is in the trash. */
+  /** Set when the item is in the trash. Everything trashed in one action shares this exact value (see trash.ts). */
   deletedAt?: string
+  /**
+   * Set when the item is deleted for good: the record is a tombstone (no text) that tells every
+   * device to drop its copy, and it wins over any later edit of the item.
+   */
+  purgedAt?: string
 }
 
 export interface Attachment {
@@ -54,6 +59,10 @@ export interface Attachment {
   /** `/api/files/<owner>/<key>`; add `?name=` to download with the original name. */
   src: string
   addedAt: string
+  /** Set when the attachment is in the trash; it still lives in its item's list. */
+  deletedAt?: string
+  /** Set when it is deleted for good; the server then frees the file, unless something else uses it. */
+  purgedAt?: string
 }
 
 /** A note's (or a task description's) rich text, stored apart so listing a folder never loads it. */
