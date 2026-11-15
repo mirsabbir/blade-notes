@@ -9,6 +9,8 @@ interface Tokens { access: string; refresh: string; expiresAt: number }
 
 const KEY = 'bn:tokens'
 const VERIFIER = 'bn:pkce'
+/** Where to land after signing in (a link such as /connect/… survives the round trip). */
+const RETURN = 'bn:return'
 let config: Config | null = null
 const redirectUri = () => `${location.origin}/`
 
@@ -28,6 +30,7 @@ export async function signIn(): Promise<void> {
   const c = await loadConfig()
   const verifier = b64url(crypto.getRandomValues(new Uint8Array(32)))
   sessionStorage.setItem(VERIFIER, verifier)
+  sessionStorage.setItem(RETURN, location.pathname + location.hash)
   const challenge = b64url(await crypto.subtle.digest('SHA-256', new TextEncoder().encode(verifier)))
   const q = new URLSearchParams({
     response_type: 'code',
@@ -76,7 +79,9 @@ async function tokenRequest(body: Record<string, string>): Promise<Tokens> {
 export async function completeSignIn(): Promise<void> {
   const code = new URLSearchParams(location.search).get('code')
   if (!code) return
-  history.replaceState(null, '', '/')
+  const back = sessionStorage.getItem(RETURN) ?? '/'
+  sessionStorage.removeItem(RETURN)
+  history.replaceState(null, '', back.startsWith('/') && !back.startsWith('//') ? back : '/')
   const verifier = sessionStorage.getItem(VERIFIER)
   sessionStorage.removeItem(VERIFIER)
   if (!verifier) return

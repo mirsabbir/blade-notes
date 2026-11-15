@@ -395,3 +395,12 @@ a.file-name:hover { text-decoration: underline; }
 .trash-ico { flex: none; width: 16px; height: 20px; margin-right: 8px; display: inline-flex; align-items: center; justify-content: center; color: var(--muted-fg); }
 .trash-left.soon { color: var(--warn); }
 .trash-foot { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+
+/* Connecting an AI agent (Agents.tsx) */
+.connect { max-width: 34rem; margin: 0 auto; gap: 10px; }
+.connect h1 { margin-top: 4px; }
+.connect p { margin: 0; }
+.connect-scopes { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; margin: 8px 0; }
+.connect-warn { display: flex; gap: 8px; align-items: flex-start; padding: 10px 12px; border-radius: 10px; background: var(--hover); color: var(--warn); font-size: 13px; text-align: left; }
+.connect-id { word-break: break-all; }
+.connect-cmd { display: block; margin-top: 4px; overflow-wrap: anywhere; user-select: all; }

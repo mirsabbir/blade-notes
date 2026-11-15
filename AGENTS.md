@@ -6,9 +6,9 @@ Personal notes and tasks app: React + Tiptap web app, AWS serverless backend (CD
 
 | Path | What |
 |---|---|
-| `apps/web/src` | Web app. `App.tsx` blades, `Editor.tsx` editor, `store.ts` offline store + sync, `schedule.ts`/`DatePicker.tsx`/`dates.ts` @-dates, `Agenda.tsx`, `copy.ts` Copy button + plain-text copies, `clipboard.ts` (works where the clipboard API is denied), `secret.ts`/`vault.ts`/`VaultPanel.tsx` Secret blocks, `Settings.tsx` + `SecuritySettings.tsx` + `Help.tsx` |
+| `apps/web/src` | Web app. `App.tsx` blades, `Editor.tsx` editor, `store.ts` offline store + sync, `schedule.ts`/`DatePicker.tsx`/`dates.ts` @-dates, `Agenda.tsx`, `copy.ts` Copy button + plain-text copies, `clipboard.ts` (works where the clipboard API is denied), `secret.ts`/`vault.ts`/`VaultPanel.tsx` Secret blocks, `Settings.tsx` + `SecuritySettings.tsx` + `Help.tsx`, `Agents.tsx` (consent page for AI agents, Connected apps) |
 | `packages/core/src` | Shared types (`types.ts`), dates and zones (`when.ts`), ranks, size limits |
-| `services/api` | Lambda for `/api/sync`, `/api/uploads`, `/api/files` |
+| `services/api` | Lambda for `/api/sync`, `/api/uploads`, `/api/files` (`sync.ts` = push and pull); `src/mcp/` = the MCP server and its OAuth for AI agents (`/mcp`, `/oauth/*`, [08](docs/architecture/08-agents-mcp.md)) |
 | `services/calendar` | Lambda for `/api/calendar/*` and the stream worker that writes calendars |
 | `infra/lib/notes-stack.ts` | The whole AWS stack |
 | `apps/desktop-*` | macOS (Swift) and Windows (.NET) windows around the site |

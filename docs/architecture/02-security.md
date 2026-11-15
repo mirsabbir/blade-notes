@@ -58,6 +58,7 @@ The CSP is the main guard against a script injected into the page (for example t
 - Cognito, sign-up off, code flow with PKCE, access token 1 hour, refresh token 30 days.
 - **Two-step sign-in** (TOTP): Settings › Security, set up from the app with the user's own access token (scope `aws.cognito.signin.user.admin`). The pool's MFA is `OPTIONAL`; once a user turns it on, every sign-in asks for the code.
 - Sign-out revokes the refresh token (`/oauth2/revoke`); **Sign out everywhere** calls `GlobalSignOut`.
+- **AI agents** get their own tokens, only for `/mcp`, after the owner approves them in the app; Settings › Connected apps removes them. Secret blocks stay unreadable to them. [08](08-agents-mcp.md).
 
 ## Files
 

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest'
-import { fromStored, toStored } from './handler'
+import { fromStored, toStored } from './sync'
 
 // The text a body goes through on its way to DynamoDB and back must come out identical.
 const SAMPLES = {

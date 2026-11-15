@@ -12,19 +12,25 @@ Words used across the app, the code and these docs. Alphabetical; add a term the
 
 | Term | Meaning |
 |---|---|
+| **Agent** | An AI assistant (Claude, Claude Code, others) connected through the *MCP server*. [08](architecture/08-agents-mcp.md). |
 | **Agenda** | Blade opened from the Library that lists every open date: date chips' events and task due dates, by space or by day. `apps/web/src/Agenda.tsx`, [03](architecture/03-dates-and-agenda.md). |
 | **All-day date** | A date stored as `YYYY-MM-DD`: the same calendar day in every time zone. Compare *timed date*. |
 | **Blade** | One column of the layout. Clicking a space or folder opens a blade to the right; older ones fold into *strips*. |
 | **Body** | The rich text (Tiptap JSON) of a note, task or description, stored apart from its item (`BODY#<id>`) so listing a folder never loads text. |
+| **CIMD** | Client ID metadata document: an agent names itself by an https URL that publishes its name and redirect addresses; how Claude connects. |
+| **Connected app** | A *grant*: one agent the owner allowed, read only or read and change; Settings › Connected apps lists and removes them. |
 | **Chip (date chip)** | The date shown inside a line of text, made by typing `@`. A `dateChip` node `{ id, at }` that links to an *event*. |
 | **Delete for good** | The end of the trash: by hand, or 30 days after deleting. Leaves a *tombstone*; a daily job frees the text and the files nothing else uses. [07](architecture/07-trash.md). |
 | **Cursor** | The highest `seq` a device has pulled; the next pull asks for everything after it. |
+| **DCR** | Dynamic client registration: an agent registers itself at `/oauth/register` before signing in; for agents without a *CIMD*. |
 | **Description** | Hidden text (with its own files) behind a list item or a phrase; an item of type `description` whose parent is the note or task. |
 | **Event** | An item of type `event`: one date typed with `@`, with `at`, `tz`, `status`, `private`. The chip in the text points to it. |
 | **Focus** | Button that folds every blade so the open note has the whole window. |
+| **Grant** | The record (`GRANT#<id>`) of one *connected app*: name, scope, time zone, last use. Its tokens work only while it exists. |
 | **Item** | Anything in the tree: space, folder, note, task, description, event (`packages/core/src/types.ts`). |
 | **KMS key** | The app's own AWS key, `alias/blade-notes`, that encrypts the table, files, logs and calendar sign-ins. [02](architecture/02-security.md). |
 | **Library** | The first blade: search, Agenda, spaces. |
+| **MCP server** | `https://<site>/mcp`: the door for *agents*, nine tools over the library, with its own OAuth sign-in. [08](architecture/08-agents-mcp.md). |
 | **Owner** | The one person who signs in to a deployment (sign-up is off). [runbooks/owner-setup.md](runbooks/owner-setup.md) lists what only they can do. |
 | **Pending** | Records changed on a device that the server has not accepted yet. Safe on the device; pushed on the next sync. |
 | **Recovery key** | Shown once when the vault is made; opens the vault if the passphrase is forgotten. |

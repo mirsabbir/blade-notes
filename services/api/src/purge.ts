@@ -2,7 +2,8 @@ import { ConditionalCheckFailedException } from '@aws-sdk/client-dynamodb'
 import { DeleteObjectCommand } from '@aws-sdk/client-s3'
 import { DeleteCommand, PutCommand, QueryCommand, ScanCommand } from '@aws-sdk/lib-dynamodb'
 import { applyPurge, cleanup, expiredPlan, type Item } from '@blade-notes/core'
-import { BUCKET, TABLE, db, reserve, s3 } from './handler'
+import { BUCKET, s3 } from './handler'
+import { TABLE, db, reserve } from './sync'
 
 /**
  * Once a day (an EventBridge schedule): deletes for good what has been in the trash for

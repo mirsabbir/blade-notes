@@ -219,6 +219,44 @@ export class NotesStack extends Stack {
     // Google and Microsoft send the browser back here after sign-in; the one-time state is the key.
     api.addRoutes({ path: '/api/calendar/callback', methods: [apigw.HttpMethod.GET], integration: calendarRoutes })
 
+    // ---- AI agents: the MCP endpoint and its own OAuth server (services/api/src/mcp). Agents
+    // sign in through the app (consent at /connect/…) and get tokens for /mcp only. The routes
+    // without the app's authorizer check their own tokens or are public by design (discovery).
+    const agents = new NodejsFunction(this, 'Agents', {
+      entry: path.join(root, 'services/api/src/mcp/index.ts'),
+      runtime: lambda.Runtime.NODEJS_22_X,
+      architecture: lambda.Architecture.ARM_64,
+      memorySize: 1024, // a warm copy of the library lives in memory; more memory also means more CPU
+      timeout: Duration.seconds(30),
+      environment: { TABLE_NAME: table.tableName, SITE_URL: siteUrl },
+      logGroup: new logs.LogGroup(this, 'AgentsLogs', { retention: logs.RetentionDays.ONE_MONTH, encryptionKey: key, removalPolicy: RemovalPolicy.DESTROY }),
+      bundling: { format: OutputFormat.ESM, target: 'node22', minify: true, sourceMap: true, externalModules: [], banner: "import { createRequire } from 'module'; const require = createRequire(import.meta.url);" },
+    })
+    table.grantReadWriteData(agents)
+    const agentRoutes = new HttpLambdaIntegration('AgentsFn', agents)
+    for (const [method, route] of [
+      [apigw.HttpMethod.POST, '/mcp'],
+      [apigw.HttpMethod.GET, '/mcp'],
+      [apigw.HttpMethod.DELETE, '/mcp'],
+      [apigw.HttpMethod.GET, '/.well-known/oauth-protected-resource'],
+      [apigw.HttpMethod.GET, '/.well-known/oauth-protected-resource/{proxy+}'],
+      [apigw.HttpMethod.GET, '/.well-known/oauth-authorization-server'],
+      [apigw.HttpMethod.POST, '/oauth/register'],
+      [apigw.HttpMethod.GET, '/oauth/authorize'],
+      [apigw.HttpMethod.POST, '/oauth/token'],
+      [apigw.HttpMethod.POST, '/oauth/revoke'],
+    ] as const) {
+      api.addRoutes({ path: route, methods: [method], integration: agentRoutes })
+    }
+    for (const [method, route] of [
+      [apigw.HttpMethod.GET, '/api/oauth/requests/{id}'],
+      [apigw.HttpMethod.POST, '/api/oauth/requests/{id}'],
+      [apigw.HttpMethod.GET, '/api/connections'],
+      [apigw.HttpMethod.DELETE, '/api/connections/{id}'],
+    ] as const) {
+      api.addRoutes({ path: route, methods: [method], integration: agentRoutes, authorizer: auth })
+    }
+
     // ---- Web: static files in S3 behind CloudFront on the site domain.
     const zone = route53.HostedZone.fromLookup(this, 'Zone', { domainName: props.hostedZone })
     const cert = new acm.Certificate(this, 'Cert', { domainName: siteDomain, validation: acm.CertificateValidation.fromDns(zone) })
@@ -263,6 +301,14 @@ export class NotesStack extends Stack {
         "function handler(e){var r=e.request;if(!/\\.[a-z0-9]+$/i.test(r.uri)){r.uri='/index.html';}return r;}",
       ),
     })
+    const toApi: cloudfront.BehaviorOptions = {
+      origin: new origins.HttpOrigin(`${api.apiId}.execute-api.${this.region}.amazonaws.com`),
+      viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
+      allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
+      cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
+      originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
+      responseHeadersPolicy: headers,
+    }
     const cdn = new cloudfront.Distribution(this, 'Cdn', {
       domainNames: [siteDomain],
       certificate: cert,
@@ -273,16 +319,8 @@ export class NotesStack extends Stack {
         responseHeadersPolicy: headers,
         functionAssociations: [{ function: spa, eventType: cloudfront.FunctionEventType.VIEWER_REQUEST }],
       },
-      additionalBehaviors: {
-        '/api/*': {
-          origin: new origins.HttpOrigin(`${api.apiId}.execute-api.${this.region}.amazonaws.com`),
-          viewerProtocolPolicy: cloudfront.ViewerProtocolPolicy.HTTPS_ONLY,
-          allowedMethods: cloudfront.AllowedMethods.ALLOW_ALL,
-          cachePolicy: cloudfront.CachePolicy.CACHING_DISABLED,
-          originRequestPolicy: cloudfront.OriginRequestPolicy.ALL_VIEWER_EXCEPT_HOST_HEADER,
-          responseHeadersPolicy: headers,
-        },
-      },
+      // The app's API, and the agent door at the addresses MCP clients look for.
+      additionalBehaviors: { '/api/*': toApi, '/mcp': toApi, '/oauth/*': toApi, '/.well-known/oauth-*': toApi },
     })
     new route53.ARecord(this, 'SiteA', { zone, recordName: siteDomain, target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(cdn)) })
     new route53.AaaaRecord(this, 'SiteAaaa', { zone, recordName: siteDomain, target: route53.RecordTarget.fromAlias(new targets.CloudFrontTarget(cdn)) })

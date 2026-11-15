@@ -1,13 +1,14 @@
 import { useCallback, useEffect, useState } from 'react'
-import { AppWindow, CalendarDays, CalendarOff, Check, CircleHelp, Info, LayoutGrid, MessageSquare, NotebookText, PanelRight, Shield, SlidersHorizontal, X } from 'lucide-react'
+import { AppWindow, CalendarDays, CalendarOff, Check, CircleHelp, Info, LayoutGrid, MessageSquare, NotebookText, PanelRight, Plug, Shield, SlidersHorizontal, X } from 'lucide-react'
 import type { CalendarProvider, CalendarStatus, DescriptionView, Item } from '@blade-notes/core'
 import { api, childrenOf, settingsOf, update, updateSettings, useStore } from './store'
 import { isDesktop } from './host'
 import { UpdatesSection } from './Updates'
 import { SecuritySettings } from './SecuritySettings'
 import { Help } from './Help'
+import { ConnectedApps } from './Agents'
 
-export type SettingsSection = 'general' | 'descriptions' | 'calendars' | 'spaces' | 'security' | 'help' | 'about'
+export type SettingsSection = 'general' | 'descriptions' | 'calendars' | 'spaces' | 'security' | 'apps' | 'help' | 'about'
 
 /** Lets any part of the app open Settings at a section (the Library blade owns the dialog). */
 const requests = new Set<(s: SettingsSection) => void>()
@@ -39,6 +40,7 @@ export function SettingsDialog({ initial = 'general', onClose, dark, onToggleDar
     ['calendars', 'Calendars', CalendarDays],
     ['spaces', 'Spaces', LayoutGrid],
     ['security', 'Security', Shield],
+    ['apps', 'Connected apps', Plug],
     ['help', 'How to', CircleHelp],
     ...(isDesktop ? ([['about', 'About & updates', Info]] as [SettingsSection, string, typeof Info][]) : []),
   ]
@@ -65,6 +67,7 @@ export function SettingsDialog({ initial = 'general', onClose, dark, onToggleDar
           {section === 'calendars' && <Calendars />}
           {section === 'spaces' && <Spaces />}
           {section === 'security' && <SecuritySettings />}
+          {section === 'apps' && <ConnectedApps />}
           {section === 'help' && <Help />}
           {section === 'about' && <UpdatesSection />}
         </section>

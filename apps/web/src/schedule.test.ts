@@ -4,7 +4,8 @@ vi.mock('./auth', () => ({ accessToken: async () => null }))
 vi.mock('idb-keyval', () => ({ get: async () => undefined, set: async () => {} }))
 vi.stubGlobal('fetch', async () => new Response('{}', { status: 401 }))
 
-const { chipsIn, create, createEvent, currentState, reconcileEvents } = await import('./store')
+const { create, createEvent, currentState, reconcileEvents } = await import('./store')
+const { chipsIn } = await import('@blade-notes/core')
 const { contentToText, toMarkdown } = await import('./copy')
 
 const p = (...content: object[]) => ({ type: 'paragraph', content })

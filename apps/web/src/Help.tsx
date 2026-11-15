@@ -36,6 +36,13 @@ const TOPICS: { title: string; rows: [ReactNode, ReactNode][] }[] = [
     ],
   },
   {
+    title: 'AI assistants',
+    rows: [
+      ['Settings › Connected apps', 'Copy the server address into Claude (Settings › Connectors) or Claude Code. You approve each app here, read only or read and change.'],
+      ['What they can do', 'Find, read, create, edit, move and trash notes and tasks, and read the Agenda. Secret blocks stay locked; deleting for good stays with you.'],
+    ],
+  },
+  {
     title: 'Copy',
     rows: [
       ['Copy (top right)', 'The whole note or task: title, details, text, dates written out, hidden descriptions, attachment names. Rich text for Gmail or Docs, Markdown for the rest.'],

@@ -28,12 +28,14 @@ How Blade Notes works, how to run it, why it is built this way, and what was don
 | [05](architecture/05-secret-blocks.md) | Secret blocks and the vault |
 | [06](architecture/06-copy-and-paste.md) | Copy and paste: chips, secrets and the Copy button |
 | [07](architecture/07-trash.md) | Trash: delete, restore, delete for good |
+| [08](architecture/08-agents-mcp.md) | AI agents: the MCP server and how agents sign in |
 
 ## Runbooks: how to do it
 
 | Runbook | Covers |
 |---|---|
 | [calendar-setup](runbooks/calendar-setup.md) | Set up calendar sign-in (Google, Microsoft, iCloud) |
+| [connect-an-ai-agent](runbooks/connect-an-ai-agent.md) | Connect an AI agent (Claude, Claude Code, others) |
 | [deploy](runbooks/deploy.md) | Deploy and check |
 | [owner-setup](runbooks/owner-setup.md) | Owner setup: what only the account owner can do |
 | [release](runbooks/release.md) | Release the desktop apps |
@@ -48,11 +50,13 @@ How Blade Notes works, how to run it, why it is built this way, and what was don
 | [0003](decisions/0003-kms-key-now-own-key-later.md) | One AWS-made KMS key now; own key material later | accepted |
 | [0004](decisions/0004-secret-blocks-in-the-browser.md) | Secret blocks are encrypted in the browser | accepted |
 | [0005](decisions/0005-trash-moments-and-no-siblings.md) | One delete is one moment; restore never brings back a sibling | accepted |
+| [0006](decisions/0006-agents-sign-in-through-the-app.md) | AI agents sign in through the app, with tokens of their own | accepted |
 
 ## Work logs: what was done
 
 | Date | Topic | Status |
 |---|---|---|
+| [2026-11-15](work-logs/2026-11-15-mcp-server.md) | MCP server: AI agents read and change the library | Live 2026-11-15; checked end to end on the site. |
 | [2026-11-15](work-logs/2026-11-15-trash.md) | Trash: restore, delete for good, 30 days | Live (2698593), released as v0.1.3, tested live; first clean-up run clean. |
 | [2026-11-14](work-logs/2026-11-14-checklist-cursor-and-alignment.md) | Checklist: cursor on empty lines, box level with the text, sub-items not crossed out | Live (7af1fab, 1a602f1). Cursor in the macOS app still to be checked by the owner. |
 | [2026-11-11](work-logs/2026-11-11-close-warnings.md) | Warn before closing mid-upload; save the last keystrokes on close | Live on the web and in the desktop apps (v0.1.0). |

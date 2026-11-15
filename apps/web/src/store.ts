@@ -1,7 +1,7 @@
 import { useSyncExternalStore } from 'react'
 import { get, set } from 'idb-keyval'
 import {
-  applyPurge, applyRestore, between, currentZone, DEFAULT_SETTINGS, expiredPlan, purgePlan, restorePlan, tooLarge, trashIds, utf8Bytes, ymd,
+  applyPurge, applyRestore, between, currentZone, DEFAULT_SETTINGS, eventChanges, expiredPlan, purgePlan, restorePlan, tooLarge, trashIds, utf8Bytes, ymd,
   type Item, type PullResponse, type PushResponse, type Change, type Settings, type Target,
 } from '@blade-notes/core'
 import { accessToken } from './auth'
@@ -158,48 +158,16 @@ export function createEvent(ownerId: string, title: string, at: string, extra: P
   return item.id
 }
 
-/** Every date chip in a document, with the text of the line it sits in (the event's title). */
-export function chipsIn(doc: unknown): Map<string, string> {
-  type N = { type?: string; text?: string; attrs?: { id?: string }; content?: N[] }
-  const found = new Map<string, string>()
-  const walk = (n: N) => {
-    const kids = n.content ?? []
-    const chips = kids.filter((k) => k.type === 'dateChip' && k.attrs?.id)
-    if (chips.length) {
-      const line = kids.map((k) => k.text ?? '').join('').replace(/\s+/g, ' ').trim()
-      chips.forEach((c) => found.set(c.attrs!.id!, line))
-    }
-    kids.forEach(walk)
-  }
-  walk(doc as N)
-  return found
-}
-
 /**
- * Keeps events in step with the chips in body `bodyId` after an edit: a deleted chip trashes
- * its event, an undo brings it back, and an event follows its line's text unless its title
- * was typed by hand.
+ * Keeps events in step with the chips in body `bodyId` after an edit (core `eventChanges`):
+ * a deleted chip trashes its event, an undo brings it back, titles follow their line.
  */
 export function reconcileEvents(bodyId: string, doc: unknown): void {
-  const found = chipsIn(doc)
-  const t = now()
-  let items = state.items
+  const changed = eventChanges(state.items, bodyId, doc, now())
+  if (!changed.length) return
   let pending = state.pending
-  for (const it of Object.values(state.items)) {
-    if (it.type !== 'event' || it.parentId !== bodyId || it.purgedAt) continue
-    const line = found.get(it.id)
-    let next: Item | null = null
-    if (line === undefined) next = it.deletedAt ? null : { ...it, deletedAt: t }
-    else {
-      const title = line.slice(0, 200) || 'Untitled'
-      if (it.deletedAt || (!it.customTitle && it.title !== title)) next = { ...it, deletedAt: undefined, ...(!it.customTitle && { title }) }
-    }
-    if (!next) continue
-    items = { ...items, [it.id]: { ...next, updatedAt: t } }
-    pending = mark(pending, `item:${it.id}`)
-  }
-  if (items === state.items) return
-  commit({ ...state, items, pending })
+  for (const it of changed) pending = mark(pending, `item:${it.id}`)
+  commit({ ...state, items: { ...state.items, ...Object.fromEntries(changed.map((it) => [it.id, it])) }, pending })
   scheduleSync()
 }
 
@@ -321,8 +289,8 @@ async function call<T>(method: string, path: string, body?: unknown): Promise<T>
   })
   if (res.status === 401) throw new SignedOut()
   if (!res.ok) {
-    const said = (await res.json().catch(() => null)) as { error?: string } | null
-    throw new Error(said?.error ?? `${method} ${path}: ${res.status}`)
+    const said = (await res.json().catch(() => null)) as { error?: string; error_description?: string } | null
+    throw new Error(said?.error_description ?? said?.error ?? `${method} ${path}: ${res.status}`)
   }
   return (await res.json()) as T
 }

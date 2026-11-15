@@ -35,6 +35,8 @@ A note's text, and a task's description, is a separate `Body` (Tiptap JSON), so 
 | `USER#<sub>` | `META#counter` | the account's write counter |
 | `USER#<sub>` | `CAL#<provider>`, `CALMAP#<id>` | calendar sign-in and where each date was written ([04](04-calendar-sync.md)); never synced |
 | `CALSTATE#<state>` | `CALSTATE` | one-time OAuth state, 10 minutes (`ttl`) |
+| `USER#<sub>` | `GRANT#<id>` | an AI agent the owner connected ([08](08-agents-mcp.md)); never synced |
+| `OAUTH#client\|request\|code\|token#<…>` | `OAUTH` | the agents' OAuth records, expiring by `ttl` ([08](08-agents-mcp.md)) |
 
 Every write takes the next number from the counter as its `seq`. The `bySeq` index (`pk`, `seq`) answers "what changed after N" — that is the whole sync protocol; records without a `seq` (calendar records) never reach a device. Point-in-time recovery is on (35 days). The table's stream feeds the calendar worker. Files live in S3 under `users/<sub>/`. Everything at rest is encrypted with the app's KMS key ([02-security.md](02-security.md)).
 

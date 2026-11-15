@@ -5,6 +5,7 @@ import '@fontsource-variable/geist-mono'
 import './styles.css'
 import { App } from './App'
 import { UpdateBanner } from './Updates'
+import { ConnectPage } from './Agents'
 import { completeSignIn, isSignedIn, loadConfig, signIn } from './auth'
 import { checkClock, closeWarning, load, sync, uploadWarning, useStore } from './store'
 
@@ -54,6 +55,9 @@ function Root() {
   if (phase === 'failed') return <Splash title="Could not start" text={error} />
   if (phase === 'signed-out' || (phase === 'ready' && status === 'signed-out' && !loaded))
     return <Splash title="Blade Notes" text="Your notes, folder by folder." action={{ label: 'Sign in', run: () => void signIn() }} />
+  // An AI agent asking to connect (services/api/src/mcp/oauth.ts): the owner answers here.
+  const connect = /^\/connect\/([\w-]{16,64})$/.exec(location.pathname)?.[1]
+  if (connect && phase === 'ready') return <ConnectPage id={connect} />
   if (phase === 'starting' || !loaded) return <Splash title="Blade Notes" text="Loading…" />
   return (
     <>
