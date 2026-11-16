@@ -1,0 +1,42 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Blade Notes privacy</title>
+<link rel="icon" href="/favicon.svg">
+<style>
+  body { font: 16px/1.6 system-ui, sans-serif; max-width: 40rem; margin: 0 auto; padding: 32px 16px; color: #1d2130; background: #fff; }
+  h1 { font-size: 24px; } h2 { font-size: 18px; margin-top: 28px; }
+  a { color: #3253d8; }
+  @media (prefers-color-scheme: dark) { body { color: #e6e8ef; background: #14161c; } a { color: #8ea4ff; } }
+</style>
+</head>
+<body>
+<h1>Blade Notes privacy</h1>
+<p>Blade Notes is a personal notes and tasks app. Accounts are created by its owner; nobody can sign up on their own. This page says what the app keeps and what it does with your calendar and other connected services.</p>
+
+<h2>What is stored</h2>
+<p>Your notes, tasks, dates, settings and attached files are stored on Amazon Web Services (United States), encrypted with the app's own key. Secret blocks are encrypted in your browser before they leave it; the server never sees their contents. Server logs hold timings and errors, are used only to keep the app running, and are deleted after a month.</p>
+
+<h2>Calendars (Google, Microsoft, Apple)</h2>
+<p>When you connect a calendar account in Settings › Calendars, Blade Notes creates one calendar called "Blade Notes" in that account and writes your dated items and due tasks into it. It reads nothing else.</p>
+<ul>
+  <li>With Google, it asks only for permission to make its own calendars (<code>calendar.app.created</code>) and for your email address, which is shown in Settings so you know which account is connected. It cannot see your other calendars or events.</li>
+  <li>The sign-in token is encrypted and used only to keep that calendar up to date.</li>
+  <li>Disconnecting in Settings › Calendars deletes the token and revokes it with the provider. The "Blade Notes" calendar stays in your account until you delete it there.</li>
+</ul>
+<p>Blade Notes' use and transfer of information received from Google APIs adheres to the <a href="https://developers.google.com/terms/api-services-user-data-policy">Google API Services User Data Policy</a>, including the Limited Use requirements.</p>
+
+<h2>AI assistants</h2>
+<p>Apps you connect in Settings › Connected apps, such as Claude, can read your notes and, if you allow it, change them. They never get Secret blocks. Disconnect removes their access at once.</p>
+
+<h2>What does not happen</h2>
+<p>No ads, no analytics or tracking, no selling or sharing of your data. Data from Google or any other provider is used only to show and sync your own calendar.</p>
+
+<h2>Deleting and questions</h2>
+<p>Items you delete go to the trash and are removed for good after 30 days, or at once with Delete for good. For anything else, open an issue at <a href="https://github.com/mirsabbir/blade-notes/issues">github.com/mirsabbir/blade-notes</a>.</p>
+
+<p><a href="/">Open Blade Notes</a></p>
+</body>
+</html>

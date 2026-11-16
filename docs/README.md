@@ -56,11 +56,13 @@ How Blade Notes works, how to run it, why it is built this way, and what was don
 
 | Date | Topic | Status |
 |---|---|---|
+| [2026-11-16](work-logs/2026-11-16-outlook-calendar.md) | Outlook calendar sync: Microsoft app registration | App registered and stored (secret until 2028-11-16); Outlook not connected yet. |
+| [2026-11-15](work-logs/2026-11-15-google-calendar.md) | Google Calendar sync: OAuth app, privacy page, first sync | Live 2026-11-15; event written and removed in the owner's calendar. |
 | [2026-11-15](work-logs/2026-11-15-mcp-server.md) | MCP server: AI agents read and change the library | Live 2026-11-15; checked end to end on the site. |
 | [2026-11-15](work-logs/2026-11-15-trash.md) | Trash: restore, delete for good, 30 days | Live (2698593), released as v0.1.3, tested live; first clean-up run clean. |
 | [2026-11-14](work-logs/2026-11-14-checklist-cursor-and-alignment.md) | Checklist: cursor on empty lines, box level with the text, sub-items not crossed out | Live (7af1fab, 1a602f1). Cursor in the macOS app still to be checked by the owner. |
 | [2026-11-11](work-logs/2026-11-11-close-warnings.md) | Warn before closing mid-upload; save the last keystrokes on close | Live on the web and in the desktop apps (v0.1.0). |
-| [2026-11-11](work-logs/2026-11-11-dates-agenda-calendar-copy.md) | Dates while writing (@), Agenda, calendar sync, time zones, Copy | Live and checked in the app. Google/Outlook sync waits for their OAuth apps (owner, runbook); iCloud can be connected now. |
+| [2026-11-11](work-logs/2026-11-11-dates-agenda-calendar-copy.md) | Dates while writing (@), Agenda, calendar sync, time zones, Copy | Live and checked in the app. Google live since 2026-11-15; Outlook ready to connect since 2026-11-16; iCloud can be connected now. |
 | [2026-11-11](work-logs/2026-11-11-desktop-release-v0.1.0.md) | First desktop release: v0.1.0 | Released. Installed apps from now on update themselves from GitHub Releases. |
 | [2026-11-11](work-logs/2026-11-11-project-start.md) | Blade Notes: first day, from nothing to a live app | Live. Web app, sync API, AWS stack; desktop apps released as v0.1.0 the same evening. |
 | [2026-11-11](work-logs/2026-11-11-security-kms-headers-mfa-secrets.md) | Security: KMS key at rest, headers and CSP, signed-in files, two-step sign-in, alerts, Secret blocks | Live and checked; alert email confirmed 2026-11-12. Owner: turn on two-step sign-in, create the vault. |

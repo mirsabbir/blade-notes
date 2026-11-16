@@ -1,7 +1,7 @@
 ---
 type: work-log
 date: 2026-11-11
-status: "Live and checked in the app. Google/Outlook sync waits for their OAuth apps (owner, runbook); iCloud can be connected now."
+status: "Live and checked in the app. Google live since 2026-11-15 ([log](2026-11-15-google-calendar.md)); Outlook ready to connect since 2026-11-16 ([log](2026-11-16-outlook-calendar.md)); iCloud can be connected now."
 title: "Dates while writing (@), Agenda, calendar sync, time zones, Copy"
 tags: [dates, agenda, calendar, time-zones, copy, editor]
 source: docs/work-logs/2026-11-11-dates-agenda-calendar-copy.md

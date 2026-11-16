@@ -12,21 +12,35 @@ Until a provider's OAuth app exists, Settings › Calendars says "Not available 
 
 ## Google
 
+Done 2026-11-15 in the owner's Google account. Check the account in the console's top-right avatar before step 1: a first-time account asks to accept the Google Cloud terms.
+
 1. Google Cloud console → new project → enable **Google Calendar API**.
-2. OAuth consent screen: External; scopes `openid`, `email`, `.../auth/calendar.app.created`; add yourself as a test user. While in *Testing*, refresh tokens expire after 7 days; *In production* without verification works for personal use (an "unverified app" warning shows once).
-3. Credentials → OAuth client ID → Web application → the redirect URI above.
-4. Store it (never commit it):
+2. Google Auth Platform → Get started: app name, support and contact email, audience **External**, accept the User Data Policy.
+3. Data access → Add or remove scopes → paste `openid, https://www.googleapis.com/auth/userinfo.email, https://www.googleapis.com/auth/calendar.app.created` → Update → Save. All three are *non-sensitive*: no verification, no "unverified app" warning (as long as no logo is uploaded).
+4. Branding: home page `https://<NOTES_DOMAIN>`, privacy policy `https://<NOTES_DOMAIN>/privacy.html` (`apps/web/public/privacy.html`), authorised domain = the site's registrable domain. Without the privacy link, Publish stays disabled; in *Testing*, refresh tokens expire after 7 days.
+5. Audience → Publish app → Confirm (**In production**).
+6. Clients → Create client → Web application → the redirect URI above (leave "AI-powered agent" unticked). The secret shows once: have the prompt below waiting first.
+7. Store it without the secret touching chat, history or the screen:
    ```bash
-   aws ssm put-parameter --profile <profile> --region us-east-1 --name /blade-notes/google-oauth \
-     --type SecureString --key-id alias/blade-notes --value '{"clientId":"<id>","clientSecret":"<secret>"}'
+   printf 'Client ID: '; read -r CID; printf 'Secret: '; read -rs CS; echo; aws ssm put-parameter --profile <profile> --region us-east-1 --name /blade-notes/google-oauth --type SecureString --key-id alias/blade-notes --value "$(jq -nc --arg i "$CID" --arg s "$CS" '{clientId:$i,clientSecret:$s}')" >/dev/null && echo saved; unset CS
    ```
+8. Settings › Calendars shows Connect within 5 minutes (it showed it at once on 2026-11-15).
+
+Replacing the client secret: Clients → the client → Add secret, store it with `--overwrite`, then disable the old one.
 
 ## Microsoft (Outlook)
 
-1. Microsoft Entra admin center → App registrations → New; accounts in any directory **and personal Microsoft accounts**; Web redirect URI above.
-2. API permissions, Microsoft Graph, delegated: `openid`, `email`, `offline_access`, `Calendars.ReadWrite`.
-3. Certificates & secrets → new client secret.
-4. Same `put-parameter` with `--name /blade-notes/microsoft-oauth`.
+Done 2026-11-16 in the owner's personal Entra tenant (never a work tenant), by Graph API instead of the portal. **The client secret expires 2028-11-16**: before then add a new one and store it with `--overwrite`, or Outlook sync stops.
+
+1. Sign in to the personal tenant in a throwaway az profile, so the everyday az login and its work tenants stay untouched:
+   ```bash
+   AZURE_CONFIG_DIR=<tmp>/az-personal az login --tenant <tenant-id> --allow-no-subscriptions
+   ```
+2. `POST https://graph.microsoft.com/v1.0/applications` with `signInAudience: AzureADandPersonalMicrosoftAccount`, `api.requestedAccessTokenVersion: 2` (required for personal accounts), `web.redirectUris: [the redirect URI above]` and Microsoft Graph delegated scopes `openid`, `email`, `offline_access`, `Calendars.ReadWrite` (look their ids up in the tenant: `servicePrincipals(appId='00000003-0000-0000-c000-000000000000')` → `oauth2PermissionScopes`).
+3. `POST …/applications/<id>/addPassword` with an `endDateTime` 24 months out; pipe `secretText` straight into `put-parameter --name /blade-notes/microsoft-oauth` in the same command, never printed.
+4. Delete the throwaway az profile.
+
+Portal equivalent: Entra admin center → App registrations → New (any directory and personal accounts, Web redirect URI) → API permissions (the four above) → Certificates & secrets.
 
 ## iCloud
 
